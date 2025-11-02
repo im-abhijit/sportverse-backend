@@ -20,6 +20,9 @@ public class OtpService {
 
     public Verification sendOtp(String phoneNumber, String channel) {
         try {
+            System.out.println("Account Sid: " + accountSid);
+            System.out.println("Auth Token: " + authToken);
+            System.out.println("Verification Service Sid: " + verificationServiceSid);
             Twilio.init(accountSid, authToken);
             
             Verification verification = Verification.creator(
