@@ -9,6 +9,8 @@ public class CreateVenueRequest {
     private String location;
     private List<String> photos;
     private String city;
+    private String partnerId;
+    private String partnerMobileNo;
 
     public CreateVenueRequest() {}
 
@@ -64,6 +66,22 @@ public class CreateVenueRequest {
     }
     public void setCity(String city) {
         this.city = city;
+    }
+
+    public String getPartnerId() {
+        return partnerId;
+    }
+
+    public void setPartnerId(String partnerId) {
+        this.partnerId = partnerId;
+    }
+
+    public String getPartnerMobileNo() {
+        return partnerMobileNo;
+    }
+
+    public void setPartnerMobileNo(String partnerMobileNo) {
+        this.partnerMobileNo = partnerMobileNo;
     }
 }
 

@@ -6,6 +6,7 @@ import co.sportverse.sportverse_backend.dto.VenueResponse;
 import co.sportverse.sportverse_backend.entity.Venue;
 import co.sportverse.sportverse_backend.repository.VenueRepository;
 import co.sportverse.sportverse_backend.repository.UserRepository;
+import co.sportverse.sportverse_backend.repository.PartnerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,10 +22,11 @@ public class VenueController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PartnerRepository partnerRepository;
+
     @PostMapping
-    public ResponseEntity<ApiResponse> createVenue(
-            @RequestBody CreateVenueRequest request,
-            @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    public ResponseEntity<ApiResponse> createVenue(@RequestBody CreateVenueRequest request) {
         try {
             // Validate required fields
             if (request.getName() == null || request.getName().trim().isEmpty()) {
@@ -37,9 +39,14 @@ public class VenueController {
                     .body(new ApiResponse(false, "Venue location is required"));
             }
 
-            if (userId == null || userId.trim().isEmpty()) {
+            if (request.getPartnerId() == null || request.getPartnerId().trim().isEmpty()) {
                 return ResponseEntity.badRequest()
-                    .body(new ApiResponse(false, "User ID is required. Please provide X-User-Id header"));
+                    .body(new ApiResponse(false, "Partner ID is required. Please provide "));
+            }
+
+            if (request.getPartnerMobileNo() == null || request.getPartnerMobileNo().trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(new ApiResponse(false, "Partner mobile no is required. Please provide"));
             }
 
             // Validate photos (max 3)
@@ -55,15 +62,24 @@ public class VenueController {
                 request.getGames(),
                 request.getLocation(),
                 request.getPhotos(),
-                userId,
-                request.getCity()
+                request.getPartnerId(),
+                request.getCity(),
+                request.getPartnerMobileNo()
             );
 
             // Save venue using repository
             Venue savedVenue = venueRepository.save(venue);
 
-            // Mark the user as a venue owner
-            userRepository.updateIsVenueOwner(userId, true);
+            // Add venue ID to partner's venues list
+            if (request.getPartnerId() != null && !request.getPartnerId().trim().isEmpty()) {
+                try {
+                    partnerRepository.addVenueToPartner(request.getPartnerId().trim(), savedVenue.getId());
+                } catch (Exception e) {
+                    // Log error but don't fail the venue creation
+                    System.err.println("Failed to update partner venues: " + e.getMessage());
+                }
+            }
+
             VenueResponse response = new VenueResponse(savedVenue);
 
             return ResponseEntity.ok(new ApiResponse(true, "Venue created successfully", response));
@@ -118,10 +134,10 @@ public class VenueController {
         }
     }
 
-    @GetMapping("/owner/{ownerId}")
-    public ResponseEntity<ApiResponse> getVenuesByOwner(@PathVariable String ownerId) {
+    @GetMapping("/partner/{partnerId}")
+    public ResponseEntity<ApiResponse> getVenuesByOwner(@PathVariable String partnerId) {
         try {
-            java.util.List<Venue> venues = venueRepository.findByOwnerId(ownerId);
+            java.util.List<Venue> venues = venueRepository.findByPartnerId(partnerId);
             java.util.List<VenueResponse> responses = venues.stream()
                     .map(VenueResponse::new)
                     .toList();

@@ -9,8 +9,9 @@ public class VenueResponse {
     private java.util.List<String> games;
     private String addtress;
     private java.util.List<String> photos;
-    private String ownerId;
+    private String partnerId;
     private String city;
+    private String partnerMobileNo;
 
     public VenueResponse() {}
 
@@ -21,8 +22,9 @@ public class VenueResponse {
         this.games = venue.getGames();
         this.addtress = venue.getLocation();
         this.photos = venue.getPhotos();
-        this.ownerId = venue.getOwnerId();
+        this.partnerId = venue.getPartnerId();
         this.city = venue.getCity();
+        this.partnerMobileNo = venue.getPartnerMobileNo();
     }
 
     public String getId() {
@@ -73,12 +75,12 @@ public class VenueResponse {
         this.photos = photos;
     }
 
-    public String getOwnerId() {
-        return ownerId;
+    public String getPartnerId() {
+        return partnerId;
     }
 
-    public void setOwnerId(String ownerId) {
-        this.ownerId = ownerId;
+    public void setPartnerId(String partnerId) {
+        this.partnerId = partnerId;
     }
 
     public String getCity() {
@@ -87,6 +89,14 @@ public class VenueResponse {
 
     public void setCity(String city) {
         this.city = city;
+    }
+
+    public String getPartnerMobileNo() {
+        return partnerMobileNo;
+    }
+
+    public void setPartnerMobileNo(String partnerMobileNo) {
+        this.partnerMobileNo = partnerMobileNo;
     }
 }
 

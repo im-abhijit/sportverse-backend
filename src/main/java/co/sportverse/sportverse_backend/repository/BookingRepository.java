@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.in;
+import static com.mongodb.client.model.Sorts.descending;
 import static com.mongodb.client.model.Updates.combine;
 import static com.mongodb.client.model.Updates.set;
 
@@ -95,8 +97,58 @@ public class BookingRepository {
     }
 
     public java.util.List<Document> findByUserId(String userId) {
-        Bson filter = eq("userId", new org.bson.types.ObjectId(userId));
-        return bookingsCollection.find(filter).into(new java.util.ArrayList<>());
+        Bson filter = eq("userId", userId);
+        return bookingsCollection.find(filter)
+                .sort(descending("createdAt"))
+                .into(new java.util.ArrayList<>());
+    }
+
+    public java.util.List<Document> findByVenueIds(List<String> venueIds) {
+        if (venueIds == null || venueIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<org.bson.types.ObjectId> venueObjectIds = new ArrayList<>();
+        for (String vid : venueIds) {
+            venueObjectIds.add(new org.bson.types.ObjectId(vid));
+        }
+        Bson filter = in("venueId", venueObjectIds);
+        return bookingsCollection.find(filter)
+                .sort(descending("createdAt"))
+                .into(new ArrayList<>());
+    }
+
+    public String createBookingDirect(String partnerId, String userId, String venueId, List<co.sportverse.sportverse_backend.dto.CreateBookingRequest.SlotDto> slotDtos, String date, int amount) {
+        Instant now = Instant.now();
+        List<Document> slotsList = new ArrayList<>();
+        if (slotDtos != null) {
+            for (co.sportverse.sportverse_backend.dto.CreateBookingRequest.SlotDto slotDto : slotDtos) {
+                Document slotDoc = new Document()
+                        .append("slotId", slotDto.getSlotId())
+                        .append("startTime", slotDto.getStartTime())
+                        .append("endTime", slotDto.getEndTime())
+                        .append("price", slotDto.getPrice())
+                        .append("isBooked", slotDto.isBooked());
+                slotsList.add(slotDoc);
+            }
+        }
+        Document booking = new Document()
+                .append("partnerId", partnerId)
+                .append("userId", userId)
+                .append("venueId", new org.bson.types.ObjectId(venueId))
+                .append("slots", slotsList)
+                .append("date", date)
+                .append("amount", amount)
+                .append("payment", new Document()
+                        .append("razorpayOrderId", null)
+                        .append("razorpayPaymentId", null)
+                        .append("razorpaySignature", null)
+                        .append("status", PaymentStatus.PENDING.name())
+                )
+                .append("bookingStatus", BookingStatus.CONFIRMED.name())
+                .append("createdAt", now)
+                .append("updatedAt", now);
+        bookingsCollection.insertOne(booking);
+        return booking.getObjectId("_id").toString();
     }
 }
 

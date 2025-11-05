@@ -9,8 +9,6 @@ import org.bson.conversions.Bson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-
 import static com.mongodb.client.model.Filters.eq;
 
 @Component
@@ -38,8 +36,8 @@ public class VenueRepository {
         return Venue.fromDocument(venuesCollection.find(filter).first());
     }
 
-    public java.util.List<Venue> findByOwnerId(String ownerId) {
-        Bson filter = eq("ownerId", ownerId);
+    public java.util.List<Venue> findByPartnerId(String ownerId) {
+        Bson filter = eq("partnerId", ownerId);
         return venuesCollection.find(filter)
                 .map(Venue::fromDocument)
                 .into(new java.util.ArrayList<>());

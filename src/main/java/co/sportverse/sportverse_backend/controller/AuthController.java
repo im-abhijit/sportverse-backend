@@ -2,11 +2,15 @@ package co.sportverse.sportverse_backend.controller;
 
 import co.sportverse.sportverse_backend.dto.GenerateOtpRequest;
 import co.sportverse.sportverse_backend.dto.GenerateOtpResponse;
+import co.sportverse.sportverse_backend.dto.PartnerLoginRequest;
+import co.sportverse.sportverse_backend.dto.PartnerLoginResponse;
 import co.sportverse.sportverse_backend.dto.VerifyOtpRequest;
 import co.sportverse.sportverse_backend.dto.VerifyOtpResponse;
 import co.sportverse.sportverse_backend.entity.User;
+import co.sportverse.sportverse_backend.repository.PartnerRepository;
 import co.sportverse.sportverse_backend.service.OtpService;
 import co.sportverse.sportverse_backend.service.UserService;
+import org.bson.Document;
 import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "http://localhost:8081")
 public class AuthController {
 
     @Autowired
@@ -24,6 +28,9 @@ public class AuthController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private PartnerRepository partnerRepository;
 
     @PostMapping("/generate-otp")
     public ResponseEntity<GenerateOtpResponse> generateOtp(@RequestBody GenerateOtpRequest request) {
@@ -131,6 +138,47 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                 .body(new VerifyOtpResponse(false, "An error occurred while verifying OTP: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/partner/login")
+    public ResponseEntity<PartnerLoginResponse> partnerLogin(@RequestBody PartnerLoginRequest request) {
+        try {
+            // Validate partnerId
+            if (request.getPartnerId() == null || request.getPartnerId().trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                    .body(new PartnerLoginResponse(false, "Partner ID is required"));
+            }
+
+            // Validate password
+            if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                    .body(new PartnerLoginResponse(false, "Password is required"));
+            }
+
+            // Fetch partner from database
+            Document partner = partnerRepository.findByPartnerId(request.getPartnerId().trim());
+            
+            if (partner == null) {
+                return ResponseEntity.ok(new PartnerLoginResponse(false, "Invalid partner ID or password"));
+            }
+
+            // Verify password
+            String storedPassword = partner.getString("password");
+            if (storedPassword == null || !storedPassword.equals(request.getPassword().trim())) {
+                return ResponseEntity.ok(new PartnerLoginResponse(false, "Invalid partner ID or password"));
+            }
+
+            // Login successful
+            return ResponseEntity.ok(new PartnerLoginResponse(
+                true,
+                "Partner login successful",
+                request.getPartnerId().trim()
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                .body(new PartnerLoginResponse(false, "An error occurred while logging in: " + e.getMessage()));
         }
     }
 

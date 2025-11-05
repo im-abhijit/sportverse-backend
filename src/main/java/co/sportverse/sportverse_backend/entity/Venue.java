@@ -12,20 +12,22 @@ public class Venue {
     List<String> games;
     String location;
     List<String> photos; // max 3 photos
-    String ownerId;
+    String partnerId;
+    String partnerMobileNo;
     String city;   // Reference to User
 
     // Constructors
     public Venue() {}
 
-    public Venue(String name, String description, List<String> games, String location, List<String> photos, String ownerId, String city) {
+    public Venue(String name, String description, List<String> games, String location, List<String> photos, String partnerId, String city, String partnerMobileNo) {
         this.name = name;
         this.description = description;
         this.games = games;
         this.location = location;
         this.photos = photos;
-        this.ownerId = ownerId;
+        this.partnerId = partnerId;
         this.city = city;
+        this.partnerMobileNo = partnerMobileNo;
     }
 
     // Getters and Setters
@@ -77,12 +79,12 @@ public class Venue {
         this.photos = photos;
     }
 
-    public String getOwnerId() {
-        return ownerId;
+    public String getPartnerId() {
+        return partnerId;
     }
 
-    public void setOwnerId(String ownerId) {
-        this.ownerId = ownerId;
+    public void setPartnerId(String partnerId) {
+        this.partnerId = partnerId;
     }
 
     public String getCity() {
@@ -91,6 +93,14 @@ public class Venue {
 
     public void setCity(String city) {
         this.city = city;
+    }
+
+    public String getPartnerMobileNo() {
+        return partnerMobileNo;
+    }
+
+    public void setPartnerMobileNo(String partnerMobileNo) {
+        this.partnerMobileNo = partnerMobileNo;
     }
 
     @Override
@@ -102,7 +112,7 @@ public class Venue {
                 ", games=" + games +
                 ", location='" + location + '\'' +
                 ", photos=" + photos +
-                ", ownerId='" + ownerId + '\'' +
+                ", ownerId='" + partnerId + '\'' +
                 '}';
     }
 
@@ -116,8 +126,9 @@ public class Venue {
         venue.setGames(doc.getList("games", String.class));
         venue.setLocation(doc.getString("location"));
         venue.setPhotos(doc.getList("photos", String.class));
-        venue.setOwnerId(doc.getString("ownerId"));
+        venue.setPartnerId(doc.getString("partnerId"));
         venue.setCity(doc.getString("city"));
+        venue.setPartnerMobileNo(doc.getString("partnerMobileNo"));
         return venue;
     }
 
@@ -131,8 +142,10 @@ public class Venue {
         doc.append("games", this.games);
         doc.append("location", this.location);
         doc.append("photos", this.photos);
-        doc.append("ownerId", this.ownerId);
+        doc.append("partnerId", this.partnerId);
         doc.append("city", this.city);
+        doc.append("partnerMobileNo", this.partnerMobileNo);
         return doc;
     }
+
 }
