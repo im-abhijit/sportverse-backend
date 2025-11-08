@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/slots")
-@CrossOrigin(origins = "https://sportverse.co.in")
+@CrossOrigin(origins = "http://localhost:8081")
 public class SlotsController {
 
     @Autowired

@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/venues")
-@CrossOrigin(origins = "https://sportverse.co.in")
+@CrossOrigin(origins = "http://localhost:8081")
 public class VenueController {
 
     @Autowired
