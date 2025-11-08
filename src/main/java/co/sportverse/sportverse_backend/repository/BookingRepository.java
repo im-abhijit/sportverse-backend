@@ -142,7 +142,7 @@ public class BookingRepository {
                         .append("razorpayOrderId", null)
                         .append("razorpayPaymentId", null)
                         .append("razorpaySignature", null)
-                        .append("status", PaymentStatus.PENDING.name())
+                        .append("status", PaymentStatus.SUCCESS.name())
                 )
                 .append("bookingStatus", BookingStatus.CONFIRMED.name())
                 .append("createdAt", now)
