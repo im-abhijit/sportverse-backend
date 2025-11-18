@@ -58,6 +58,13 @@ public class SlotsRepository {
             slotsCollection.replaceOne(filter, doc);
         }
     }
+
+    public VenueSlots updateSlots(VenueSlots venueSlots) {
+        Bson filter = and(eq("venueId", new org.bson.types.ObjectId(venueSlots.getVenueId())), eq("date", venueSlots.getDate()));
+        Document doc = venueSlots.toDocument();
+        slotsCollection.replaceOne(filter, doc);
+        return venueSlots;
+    }
 }
 
 
