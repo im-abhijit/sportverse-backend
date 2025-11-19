@@ -122,6 +122,19 @@ public class SlotsService {
         }
         return slotsRepository.findByVenueIdAndDate(venueId.trim(), date.trim());
     }
+
+    public boolean deleteSlot(String venueId, String date, String slotId) {
+        if (venueId == null || venueId.trim().isEmpty()) {
+            throw new IllegalArgumentException("venueId is required");
+        }
+        if (date == null || date.trim().isEmpty()) {
+            throw new IllegalArgumentException("date is required (yyyy-MM-dd)");
+        }
+        if (slotId == null || slotId.trim().isEmpty()) {
+            throw new IllegalArgumentException("slotId is required");
+        }
+        return slotsRepository.deleteSlot(venueId.trim(), date.trim(), slotId.trim());
+    }
 }
 
 

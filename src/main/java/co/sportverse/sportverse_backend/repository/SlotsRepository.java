@@ -65,6 +65,35 @@ public class SlotsRepository {
         slotsCollection.replaceOne(filter, doc);
         return venueSlots;
     }
+
+    public boolean deleteSlot(String venueId, String date, String slotId) {
+        Bson filter = and(eq("venueId", new org.bson.types.ObjectId(venueId)), eq("date", date));
+        Document doc = slotsCollection.find(filter).first();
+        if (doc == null) {
+            return false;
+        }
+        java.util.List<Document> slotDocs = (java.util.List<Document>) doc.get("slots");
+        if (slotDocs == null || slotDocs.isEmpty()) {
+            return false;
+        }
+        boolean found = false;
+        java.util.List<Document> updatedSlots = new java.util.ArrayList<>();
+        for (Document slotDoc : slotDocs) {
+            String sid = slotDoc.getString("slotId");
+            if (sid != null && sid.equals(slotId)) {
+                found = true;
+                // Skip this slot (don't add it to updatedSlots)
+            } else {
+                updatedSlots.add(slotDoc);
+            }
+        }
+        if (found) {
+            doc.put("slots", updatedSlots);
+            slotsCollection.replaceOne(filter, doc);
+            return true;
+        }
+        return false;
+    }
 }
 
 
