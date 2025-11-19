@@ -11,6 +11,8 @@ public class CreateVenueRequest {
     private String city;
     private String partnerId;
     private String partnerMobileNo;
+    private String qrCodeImage;
+    private String upiId;
 
     public CreateVenueRequest() {}
 
@@ -82,6 +84,22 @@ public class CreateVenueRequest {
 
     public void setPartnerMobileNo(String partnerMobileNo) {
         this.partnerMobileNo = partnerMobileNo;
+    }
+
+    public String getQrCodeImage() {
+        return qrCodeImage;
+    }
+
+    public void setQrCodeImage(String qrCodeImage) {
+        this.qrCodeImage = qrCodeImage;
+    }
+
+    public String getUpiId() {
+        return upiId;
+    }
+
+    public void setUpiId(String upiId) {
+        this.upiId = upiId;
     }
 }
 

@@ -12,7 +12,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/bookings")
-@CrossOrigin(origins = "https://sportverse.co.in")
+@CrossOrigin(origins = {
+        "https://sportverse.co.in",
+        "http://localhost:8083"
+})
 public class BookingController {
 
     @Autowired

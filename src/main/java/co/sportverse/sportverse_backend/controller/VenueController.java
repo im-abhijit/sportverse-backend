@@ -13,7 +13,10 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/venues")
-@CrossOrigin(origins = "https://sportverse.co.in")
+@CrossOrigin(origins = {
+        "https://sportverse.co.in",
+        "http://localhost:8083"
+})
 public class VenueController {
 
     @Autowired
@@ -64,7 +67,9 @@ public class VenueController {
                 request.getPhotos(),
                 request.getPartnerId(),
                 request.getCity(),
-                request.getPartnerMobileNo()
+                request.getPartnerMobileNo(),
+                    request.getQrCodeImage(),
+                    request.getUpiId()
             );
 
             // Save venue using repository

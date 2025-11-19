@@ -15,11 +15,13 @@ public class Venue {
     String partnerId;
     String partnerMobileNo;
     String city;   // Reference to User
+    String qrCodeImage;
+    String upiId;
 
     // Constructors
     public Venue() {}
 
-    public Venue(String name, String description, List<String> games, String location, List<String> photos, String partnerId, String city, String partnerMobileNo) {
+    public Venue(String name, String description, List<String> games, String location, List<String> photos, String partnerId, String city, String partnerMobileNo, String qrCodeImage, String upiId) {
         this.name = name;
         this.description = description;
         this.games = games;
@@ -28,6 +30,8 @@ public class Venue {
         this.partnerId = partnerId;
         this.city = city;
         this.partnerMobileNo = partnerMobileNo;
+        this.qrCodeImage = qrCodeImage;
+        this.upiId = upiId;
     }
 
     // Getters and Setters
@@ -103,6 +107,22 @@ public class Venue {
         this.partnerMobileNo = partnerMobileNo;
     }
 
+    public String getQrCodeImage() {
+        return qrCodeImage;
+    }
+
+    public void setQrCodeImage(String qrCodeImage) {
+        this.qrCodeImage = qrCodeImage;
+    }
+
+    public String getUpiId() {
+        return upiId;
+    }
+
+    public void setUpiId(String upiId) {
+        this.upiId = upiId;
+    }
+
     @Override
     public String toString() {
         return "Venue{" +
@@ -129,6 +149,8 @@ public class Venue {
         venue.setPartnerId(doc.getString("partnerId"));
         venue.setCity(doc.getString("city"));
         venue.setPartnerMobileNo(doc.getString("partnerMobileNo"));
+        venue.setQrCodeImage(doc.getString("qrCodeImage"));
+        venue.setUpiId(doc.getString("upiId"));
         return venue;
     }
 
@@ -145,6 +167,8 @@ public class Venue {
         doc.append("partnerId", this.partnerId);
         doc.append("city", this.city);
         doc.append("partnerMobileNo", this.partnerMobileNo);
+        doc.append("qrCodeImage", this.qrCodeImage);
+        doc.append("upiId", this.upiId);
         return doc;
     }
 
