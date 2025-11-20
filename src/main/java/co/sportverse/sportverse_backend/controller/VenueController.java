@@ -63,7 +63,7 @@ public class VenueController {
             }
 
             // Validate photos (max 3)
-            if (request.getPhotos() != null && request.getPhotos().size() > 3) {
+            if (request.getPhotos() != null && request.getPhotos().size() > 8) {
                 logger.warn("POST /api/venues - Validation failed: Maximum 3 photos allowed. Received: {}", 
                         request.getPhotos().size());
                 return ResponseEntity.badRequest()
