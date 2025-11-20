@@ -38,7 +38,7 @@ public class SlotsService {
         // Check if slots already exist for this venue/date
         VenueSlots existing = slotsRepository.findByVenueIdAndDate(request.getVenueId(), request.getDate());
         
-        if (existing != null && existing.getSlots() != null && !existing.getSlots().isEmpty()) {
+        if (existing != null && existing.getSlots() != null) {
             // Check for overlaps between new slots and existing slots
             if (hasOverlapsBetween(newSlots, existing.getSlots())) {
                 throw new IllegalStateException("New slots overlap with existing slots for this venue and date");
