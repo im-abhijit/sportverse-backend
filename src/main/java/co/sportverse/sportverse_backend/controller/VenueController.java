@@ -81,24 +81,21 @@ public class VenueController {
                     logger.info("POST /api/venues - Updating existing venue. venueId: {}", request.getId());
                     isUpdate = true;
                     
-                    // Create venue entity with updated values
-                    Venue venue = new Venue(
-                        request.getName(),
-                        request.getDescription(),
-                        request.getGames(),
-                        request.getLocation(),
-                        request.getPhotos(),
-                        request.getPartnerId(),
-                        request.getCity(),
-                        request.getPartnerMobileNo(),
-                        request.getQrCodeImage(),
-                        request.getUpiId(),
-                        request.getAmenities()
-                    );
-                    venue.setId(request.getId().trim());
-                    
+                    // Update existing venue fields with new values
+                    existingVenue.setName(request.getName());
+                    existingVenue.setDescription(request.getDescription());
+                    existingVenue.setGames(request.getGames());
+                    existingVenue.setLocation(request.getLocation());
+                    existingVenue.setPhotos(request.getPhotos());
+                    existingVenue.setPartnerId(request.getPartnerId());
+                    existingVenue.setCity(request.getCity());
+                    existingVenue.setPartnerMobileNo(request.getPartnerMobileNo());
+                    existingVenue.setQrCodeImage(request.getQrCodeImage());
+                    existingVenue.setUpiId(request.getUpiId());
+                    existingVenue.setAmenities(request.getAmenities());
+                    existingVenue.setId(request.getId());
                     // Update venue using repository
-                    savedVenue = venueRepository.update(venue);
+                    savedVenue = venueRepository.update(existingVenue);
                     logger.info("POST /api/venues - Successfully updated venue. venueId: {}", savedVenue.getId());
                 } else {
                     // ID provided but venue doesn't exist, create new venue
@@ -157,6 +154,10 @@ public class VenueController {
 
             return ResponseEntity.ok(new ApiResponse(true, message, response));
 
+        } catch (IllegalArgumentException e) {
+            logger.warn("POST /api/venues - Invalid request: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                .body(new ApiResponse(false, e.getMessage()));
         } catch (Exception e) {
             logger.error("POST /api/venues - Error processing venue. id: {}, name: {}, partnerId: {}", 
                     request.getId(), request.getName(), request.getPartnerId(), e);

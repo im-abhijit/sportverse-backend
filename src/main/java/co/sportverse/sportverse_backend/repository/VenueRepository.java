@@ -33,7 +33,19 @@ public class VenueRepository {
     }
 
     public Venue findById(String id) {
-        Bson filter = eq("_id", new org.bson.types.ObjectId(id));
+        if (id == null || id.trim().isEmpty()) {
+            return null;
+        }
+        
+        // Validate ObjectId format
+        String venueId = id.trim();
+        try {
+            new org.bson.types.ObjectId(venueId);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid venue ID format: " + venueId);
+        }
+        
+        Bson filter = eq("_id", new org.bson.types.ObjectId(venueId));
         return Venue.fromDocument(venuesCollection.find(filter).first());
     }
 
@@ -62,9 +74,17 @@ public class VenueRepository {
             throw new IllegalArgumentException("Venue ID is required for update");
         }
         
-        Bson filter = eq("_id", new org.bson.types.ObjectId(venue.getId()));
+        // Validate ObjectId format
+        String venueId = venue.getId().trim();
+        try {
+            new org.bson.types.ObjectId(venueId);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid venue ID format: " + venueId);
+        }
+        
+        Bson filter = eq("_id", new org.bson.types.ObjectId(venueId));
         Document doc = venue.toDocument();
-        doc.remove("_id"); // Remove _id from update document
+        doc.remove("_id"); // Remove _id from update document as MongoDB doesn't allow updating _id
         
         venuesCollection.updateOne(filter, new Document("$set", doc));
         return venue;
