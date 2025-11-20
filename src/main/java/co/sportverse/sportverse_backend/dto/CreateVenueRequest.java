@@ -3,6 +3,7 @@ package co.sportverse.sportverse_backend.dto;
 import java.util.List;
 
 public class CreateVenueRequest {
+    private String id; // Optional: if provided, will update existing venue
     private String name;
     private String description;
     private List<String> games;
@@ -109,6 +110,14 @@ public class CreateVenueRequest {
 
     public void setAmenities(List<String> amenities) {
         this.amenities = amenities;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 }
 

@@ -34,8 +34,8 @@ public class VenueController {
 
     @PostMapping
     public ResponseEntity<ApiResponse> createVenue(@RequestBody CreateVenueRequest request) {
-        logger.info("POST /api/venues - Creating venue. name: {}, partnerId: {}, city: {}", 
-                request.getName(), request.getPartnerId(), request.getCity());
+        logger.info("POST /api/venues - Processing venue. id: {}, name: {}, partnerId: {}, city: {}", 
+                request.getId(), request.getName(), request.getPartnerId(), request.getCity());
         try {
             // Validate required fields
             if (request.getName() == null || request.getName().trim().isEmpty()) {
@@ -70,27 +70,77 @@ public class VenueController {
                     .body(new ApiResponse(false, "Maximum 3 photos allowed"));
             }
 
-            // Create venue entity
-            Venue venue = new Venue(
-                request.getName(),
-                request.getDescription(),
-                request.getGames(),
-                request.getLocation(),
-                request.getPhotos(),
-                request.getPartnerId(),
-                request.getCity(),
-                request.getPartnerMobileNo(),
+            Venue savedVenue;
+            boolean isUpdate = false;
+
+            // Check if venue exists by ID
+            if (request.getId() != null && !request.getId().trim().isEmpty()) {
+                Venue existingVenue = venueRepository.findById(request.getId().trim());
+                if (existingVenue != null) {
+                    // Update existing venue
+                    logger.info("POST /api/venues - Updating existing venue. venueId: {}", request.getId());
+                    isUpdate = true;
+                    
+                    // Create venue entity with updated values
+                    Venue venue = new Venue(
+                        request.getName(),
+                        request.getDescription(),
+                        request.getGames(),
+                        request.getLocation(),
+                        request.getPhotos(),
+                        request.getPartnerId(),
+                        request.getCity(),
+                        request.getPartnerMobileNo(),
+                        request.getQrCodeImage(),
+                        request.getUpiId(),
+                        request.getAmenities()
+                    );
+                    venue.setId(request.getId().trim());
+                    
+                    // Update venue using repository
+                    savedVenue = venueRepository.update(venue);
+                    logger.info("POST /api/venues - Successfully updated venue. venueId: {}", savedVenue.getId());
+                } else {
+                    // ID provided but venue doesn't exist, create new venue
+                    logger.info("POST /api/venues - Venue ID provided but not found, creating new venue. id: {}", request.getId());
+                    Venue venue = new Venue(
+                        request.getName(),
+                        request.getDescription(),
+                        request.getGames(),
+                        request.getLocation(),
+                        request.getPhotos(),
+                        request.getPartnerId(),
+                        request.getCity(),
+                        request.getPartnerMobileNo(),
+                        request.getQrCodeImage(),
+                        request.getUpiId(),
+                        request.getAmenities()
+                    );
+                    savedVenue = venueRepository.save(venue);
+                    logger.info("POST /api/venues - Successfully created venue. venueId: {}", savedVenue.getId());
+                }
+            } else {
+                // No ID provided, create new venue
+                logger.info("POST /api/venues - Creating new venue");
+                Venue venue = new Venue(
+                    request.getName(),
+                    request.getDescription(),
+                    request.getGames(),
+                    request.getLocation(),
+                    request.getPhotos(),
+                    request.getPartnerId(),
+                    request.getCity(),
+                    request.getPartnerMobileNo(),
                     request.getQrCodeImage(),
                     request.getUpiId(),
                     request.getAmenities()
-            );
+                );
+                savedVenue = venueRepository.save(venue);
+                logger.info("POST /api/venues - Successfully created venue. venueId: {}", savedVenue.getId());
+            }
 
-            // Save venue using repository
-            Venue savedVenue = venueRepository.save(venue);
-            logger.info("POST /api/venues - Successfully created venue. venueId: {}", savedVenue.getId());
-
-            // Add venue ID to partner's venues list
-            if (request.getPartnerId() != null && !request.getPartnerId().trim().isEmpty()) {
+            // Add venue ID to partner's venues list (only for new venues)
+            if (!isUpdate && request.getPartnerId() != null && !request.getPartnerId().trim().isEmpty()) {
                 try {
                     partnerRepository.addVenueToPartner(request.getPartnerId().trim(), savedVenue.getId());
                     logger.info("POST /api/venues - Successfully added venue to partner. partnerId: {}, venueId: {}", 
@@ -103,14 +153,15 @@ public class VenueController {
             }
 
             VenueResponse response = new VenueResponse(savedVenue);
+            String message = isUpdate ? "Venue updated successfully" : "Venue created successfully";
 
-            return ResponseEntity.ok(new ApiResponse(true, "Venue created successfully", response));
+            return ResponseEntity.ok(new ApiResponse(true, message, response));
 
         } catch (Exception e) {
-            logger.error("POST /api/venues - Error creating venue. name: {}, partnerId: {}", 
-                    request.getName(), request.getPartnerId(), e);
+            logger.error("POST /api/venues - Error processing venue. id: {}, name: {}, partnerId: {}", 
+                    request.getId(), request.getName(), request.getPartnerId(), e);
             return ResponseEntity.internalServerError()
-                .body(new ApiResponse(false, "Error creating venue: " + e.getMessage()));
+                .body(new ApiResponse(false, "Error processing venue: " + e.getMessage()));
         }
     }
 

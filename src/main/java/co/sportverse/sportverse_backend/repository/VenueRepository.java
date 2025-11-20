@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Updates.set;
 
 @Component
 public class VenueRepository {
@@ -54,5 +55,18 @@ public class VenueRepository {
         return venuesCollection.find(filter)
                 .map(Venue::fromDocument)
                 .into(new java.util.ArrayList<>());
+    }
+
+    public Venue update(Venue venue) {
+        if (venue.getId() == null || venue.getId().trim().isEmpty()) {
+            throw new IllegalArgumentException("Venue ID is required for update");
+        }
+        
+        Bson filter = eq("_id", new org.bson.types.ObjectId(venue.getId()));
+        Document doc = venue.toDocument();
+        doc.remove("_id"); // Remove _id from update document
+        
+        venuesCollection.updateOne(filter, new Document("$set", doc));
+        return venue;
     }
 }
