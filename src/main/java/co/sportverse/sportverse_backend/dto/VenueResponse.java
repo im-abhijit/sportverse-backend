@@ -2,6 +2,8 @@ package co.sportverse.sportverse_backend.dto;
 
 import co.sportverse.sportverse_backend.entity.Venue;
 
+import java.util.List;
+
 public class VenueResponse {
     private String id;
     private String name;
@@ -12,6 +14,9 @@ public class VenueResponse {
     private String partnerId;
     private String city;
     private String partnerMobileNo;
+    private String qrCodeImage;
+    private String upiId;
+    private List<String> amenities;
 
     public VenueResponse() {}
 
@@ -25,6 +30,9 @@ public class VenueResponse {
         this.partnerId = venue.getPartnerId();
         this.city = venue.getCity();
         this.partnerMobileNo = venue.getPartnerMobileNo();
+        this.qrCodeImage = venue.getQrCodeImage();
+        this.upiId = venue.getUpiId();
+        this.amenities = venue.getAmenities();
     }
 
     public String getId() {
@@ -97,6 +105,30 @@ public class VenueResponse {
 
     public void setPartnerMobileNo(String partnerMobileNo) {
         this.partnerMobileNo = partnerMobileNo;
+    }
+
+    public String getQrCodeImage() {
+        return qrCodeImage;
+    }
+
+    public void setQrCodeImage(String qrCodeImage) {
+        this.qrCodeImage = qrCodeImage;
+    }
+
+    public String getUpiId() {
+        return upiId;
+    }
+
+    public void setUpiId(String upiId) {
+        this.upiId = upiId;
+    }
+
+    public List<String> getAmenities() {
+        return amenities;
+    }
+
+    public void setAmenities(List<String> amenities) {
+        this.amenities = amenities;
     }
 }
 

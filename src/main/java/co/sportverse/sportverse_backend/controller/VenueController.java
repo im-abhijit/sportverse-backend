@@ -81,7 +81,8 @@ public class VenueController {
                 request.getCity(),
                 request.getPartnerMobileNo(),
                     request.getQrCodeImage(),
-                    request.getUpiId()
+                    request.getUpiId(),
+                    request.getAmenities()
             );
 
             // Save venue using repository

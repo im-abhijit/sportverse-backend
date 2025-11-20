@@ -13,6 +13,7 @@ public class CreateVenueRequest {
     private String partnerMobileNo;
     private String qrCodeImage;
     private String upiId;
+    private List<String> amenities;
 
     public CreateVenueRequest() {}
 
@@ -100,6 +101,14 @@ public class CreateVenueRequest {
 
     public void setUpiId(String upiId) {
         this.upiId = upiId;
+    }
+
+    public List<String> getAmenities() {
+        return amenities;
+    }
+
+    public void setAmenities(List<String> amenities) {
+        this.amenities = amenities;
     }
 }
 
