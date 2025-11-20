@@ -72,6 +72,8 @@ public class BookingService {
                     slot.setSlotId(slotDoc.getString("slotId"));
                     slot.setStartTime(slotDoc.getString("startTime"));
                     slot.setEndTime(slotDoc.getString("endTime"));
+                    slot.setStartTimeAmPm(slotDoc.getString("startTimeAmPm"));
+                    slot.setEndTimeAmPm(slotDoc.getString("endTimeAmPm"));
                     Object priceValue = slotDoc.get("price");
                     if (priceValue instanceof Number) {
                         slot.setPrice(((Number) priceValue).intValue());
@@ -151,6 +153,8 @@ public class BookingService {
                     slot.setSlotId(slotDoc.getString("slotId"));
                     slot.setStartTime(slotDoc.getString("startTime"));
                     slot.setEndTime(slotDoc.getString("endTime"));
+                    slot.setStartTimeAmPm(slotDoc.getString("startTimeAmPm"));
+                    slot.setEndTimeAmPm(slotDoc.getString("endTimeAmPm"));
                     Object priceValue = slotDoc.get("price");
                     if (priceValue instanceof Number) {
                         slot.setPrice(((Number) priceValue).intValue());

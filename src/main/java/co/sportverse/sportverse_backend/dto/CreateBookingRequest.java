@@ -13,6 +13,8 @@ public class CreateBookingRequest {
         private String slotId;
         private String startTime;
         private String endTime;
+        private String startTimeAmPm;
+        private String endTimeAmPm;
         private int price;
         private boolean isBooked;
 
@@ -38,6 +40,22 @@ public class CreateBookingRequest {
 
         public void setEndTime(String endTime) {
             this.endTime = endTime;
+        }
+
+        public String getStartTimeAmPm() {
+            return startTimeAmPm;
+        }
+
+        public void setStartTimeAmPm(String startTimeAmPm) {
+            this.startTimeAmPm = startTimeAmPm;
+        }
+
+        public String getEndTimeAmPm() {
+            return endTimeAmPm;
+        }
+
+        public void setEndTimeAmPm(String endTimeAmPm) {
+            this.endTimeAmPm = endTimeAmPm;
         }
 
         public int getPrice() {

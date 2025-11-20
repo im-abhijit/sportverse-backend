@@ -27,7 +27,7 @@ public class SlotsService {
         // Convert new slots to TimeSlot objects
         java.util.List<TimeSlot> newSlots = new java.util.ArrayList<>();
         for (CreateSlotsRequest.SlotDto s : request.getSlots()) {
-            newSlots.add(new TimeSlot(s.getSlotId(), s.getStartTime(), s.getEndTime(), s.getPrice(), s.isBooked()));
+            newSlots.add(new TimeSlot(s.getSlotId(), s.getStartTime(), s.getEndTime(), s.getStartTimeAmPm(), s.getEndTimeAmPm(), s.getPrice(), s.isBooked()));
         }
 
         // Check for overlaps within new slots

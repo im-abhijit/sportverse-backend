@@ -7,6 +7,8 @@ public class TimeSlot {
     String slotId;
     String startTime;
     String endTime;
+    String startTimeAmPm;
+    String endTimeAmPm;
     int price;
     boolean isBooked;
 
@@ -16,6 +18,16 @@ public class TimeSlot {
         this.slotId = slotId;
         this.startTime = startTime;
         this.endTime = endTime;
+        this.price = price;
+        this.isBooked = isBooked;
+    }
+
+    public TimeSlot(String slotId, String startTime, String endTime, String startTimeAmPm, String endTimeAmPm, int price, boolean isBooked) {
+        this.slotId = slotId;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.startTimeAmPm = startTimeAmPm;
+        this.endTimeAmPm = endTimeAmPm;
         this.price = price;
         this.isBooked = isBooked;
     }
@@ -60,12 +72,30 @@ public class TimeSlot {
         isBooked = booked;
     }
 
+    public String getStartTimeAmPm() {
+        return startTimeAmPm;
+    }
+
+    public void setStartTimeAmPm(String startTimeAmPm) {
+        this.startTimeAmPm = startTimeAmPm;
+    }
+
+    public String getEndTimeAmPm() {
+        return endTimeAmPm;
+    }
+
+    public void setEndTimeAmPm(String endTimeAmPm) {
+        this.endTimeAmPm = endTimeAmPm;
+    }
+
     public static TimeSlot fromDocument(Document doc) {
         if (doc == null) return null;
         TimeSlot slot = new TimeSlot();
         slot.setSlotId(doc.getString("slotId"));
         slot.setStartTime(doc.getString("startTime"));
         slot.setEndTime(doc.getString("endTime"));
+        slot.setStartTimeAmPm(doc.getString("startTimeAmPm"));
+        slot.setEndTimeAmPm(doc.getString("endTimeAmPm"));
         Object priceValue = doc.get("price");
         if (priceValue instanceof Number) {
             slot.setPrice(((Number) priceValue).intValue());
@@ -79,6 +109,8 @@ public class TimeSlot {
         doc.append("slotId", this.slotId);
         doc.append("startTime", this.startTime);
         doc.append("endTime", this.endTime);
+        doc.append("startTimeAmPm", this.startTimeAmPm);
+        doc.append("endTimeAmPm", this.endTimeAmPm);
         doc.append("price", this.price);
         doc.append("isBooked", this.isBooked);
         return doc;

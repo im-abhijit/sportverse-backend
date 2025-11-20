@@ -126,6 +126,8 @@ public class BookingRepository {
                         .append("slotId", slotDto.getSlotId())
                         .append("startTime", slotDto.getStartTime())
                         .append("endTime", slotDto.getEndTime())
+                        .append("startTimeAmPm", slotDto.getStartTimeAmPm())
+                        .append("endTimeAmPm", slotDto.getEndTimeAmPm())
                         .append("price", slotDto.getPrice())
                         .append("isBooked", slotDto.isBooked());
                 slotsList.add(slotDoc);
