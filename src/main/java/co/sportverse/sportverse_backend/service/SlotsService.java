@@ -83,30 +83,70 @@ public class SlotsService {
     private boolean slotsOverlap(TimeSlot slot1, TimeSlot slot2) {
         String start1 = slot1.getStartTime();
         String end1 = slot1.getEndTime();
+        String start1AmPm = slot1.getStartTimeAmPm();
+        String end1AmPm = slot1.getEndTimeAmPm();
+        
         String start2 = slot2.getStartTime();
         String end2 = slot2.getEndTime();
+        String start2AmPm = slot2.getStartTimeAmPm();
+        String end2AmPm = slot2.getEndTimeAmPm();
         
-        // Convert HH:mm to minutes for comparison
-        int start1Minutes = timeToMinutes(start1);
-        int end1Minutes = timeToMinutes(end1);
-        int start2Minutes = timeToMinutes(start2);
-        int end2Minutes = timeToMinutes(end2);
+        // Convert 12-hour format with AM/PM to minutes for comparison
+        int start1Minutes = timeToMinutes12Hour(start1, start1AmPm);
+        int end1Minutes = timeToMinutes12Hour(end1, end1AmPm);
+        int start2Minutes = timeToMinutes12Hour(start2, start2AmPm);
+        int end2Minutes = timeToMinutes12Hour(end2, end2AmPm);
         
         // Two slots overlap if: start1 < end2 AND end1 > start2
         return start1Minutes < end2Minutes && end1Minutes > start2Minutes;
     }
 
-    private int timeToMinutes(String time) {
+    /**
+     * Converts 12-hour format time with AM/PM to minutes since midnight.
+     * Examples:
+     * - "12:00" + "AM" = 0 minutes (midnight)
+     * - "1:00" + "AM" = 60 minutes
+     * - "12:00" + "PM" = 720 minutes (noon)
+     * - "1:00" + "PM" = 780 minutes (13:00)
+     * - "11:59" + "PM" = 1439 minutes (23:59)
+     */
+    private int timeToMinutes12Hour(String time, String amPm) {
         if (time == null || time.trim().isEmpty()) {
             return 0;
         }
+        if (amPm == null || amPm.trim().isEmpty()) {
+            return 0;
+        }
+        
         String[] parts = time.split(":");
         if (parts.length != 2) {
             return 0;
         }
+        
         try {
             int hours = Integer.parseInt(parts[0].trim());
             int minutes = Integer.parseInt(parts[1].trim());
+            String amPmUpper = amPm.trim().toUpperCase();
+            
+            // Validate AM/PM
+            if (!"AM".equals(amPmUpper) && !"PM".equals(amPmUpper)) {
+                return 0;
+            }
+            
+            // Handle 12-hour format conversion
+            if ("AM".equals(amPmUpper)) {
+                // 12:XX AM becomes 0:XX (midnight hour)
+                if (hours == 12) {
+                    hours = 0;
+                }
+                // 1:XX AM to 11:XX AM stay as is
+            } else { // PM
+                // 12:XX PM stays as 12:XX (noon hour)
+                if (hours != 12) {
+                    hours += 12; // 1:XX PM becomes 13:XX, 11:XX PM becomes 23:XX
+                }
+            }
+            
             return hours * 60 + minutes;
         } catch (NumberFormatException e) {
             return 0;
