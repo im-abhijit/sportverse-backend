@@ -117,7 +117,7 @@ public class BookingRepository {
                 .into(new ArrayList<>());
     }
 
-    public String createBookingDirect(String partnerId, String userId, String venueId, List<co.sportverse.sportverse_backend.dto.CreateBookingRequest.SlotDto> slotDtos, String date, int amount) {
+    public String createBookingDirect(String partnerId, String userId, String venueId, List<co.sportverse.sportverse_backend.dto.CreateBookingRequest.SlotDto> slotDtos, String date, int amount, String status, String paymentStatus) {
         Instant now = Instant.now();
         List<Document> slotsList = new ArrayList<>();
         if (slotDtos != null) {
@@ -133,6 +133,11 @@ public class BookingRepository {
                 slotsList.add(slotDoc);
             }
         }
+        
+        // Use provided status and paymentStatus, or default values
+        String bookingStatusValue = (status != null && !status.trim().isEmpty()) ? status.trim() : BookingStatus.PENDING.name();
+        String paymentStatusValue = (paymentStatus != null && !paymentStatus.trim().isEmpty()) ? paymentStatus.trim() : PaymentStatus.PENDING.name();
+        
         Document booking = new Document()
                 .append("partnerId", partnerId)
                 .append("userId", userId)
@@ -144,13 +149,42 @@ public class BookingRepository {
                         .append("razorpayOrderId", null)
                         .append("razorpayPaymentId", null)
                         .append("razorpaySignature", null)
-                        .append("status", PaymentStatus.SUCCESS.name())
+                        .append("status", paymentStatusValue)
                 )
-                .append("bookingStatus", BookingStatus.CONFIRMED.name())
+                .append("bookingStatus", bookingStatusValue)
                 .append("createdAt", now)
                 .append("updatedAt", now);
         bookingsCollection.insertOne(booking);
         return booking.getObjectId("_id").toString();
+    }
+    
+    public Document findById(String bookingId) {
+        if (bookingId == null || bookingId.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            Bson filter = eq("_id", new org.bson.types.ObjectId(bookingId.trim()));
+            return bookingsCollection.find(filter).first();
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+    
+    public void confirmBooking(String bookingId) {
+        if (bookingId == null || bookingId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Booking ID is required");
+        }
+        try {
+            Bson filter = eq("_id", new org.bson.types.ObjectId(bookingId.trim()));
+            Instant now = Instant.now();
+            bookingsCollection.updateOne(filter, combine(
+                    set("bookingStatus", BookingStatus.SUCCESS.name()),
+                    set("payment.status", PaymentStatus.SUCCESS.name()),
+                    set("updatedAt", now)
+            ));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid booking ID format: " + bookingId);
+        }
     }
 }
 

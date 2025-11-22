@@ -192,7 +192,7 @@ public class BookingService {
         return responses;
     }
 
-    public String createBooking(String partnerId, String userId, String venueId, List<co.sportverse.sportverse_backend.dto.CreateBookingRequest.SlotDto> slotDtos, String date) {
+    public String createBooking(String partnerId, String userId, String venueId, List<co.sportverse.sportverse_backend.dto.CreateBookingRequest.SlotDto> slotDtos, String date, String status, String paymentStatus) {
         // Calculate total amount from slot DTOs and extract slot IDs
         int totalAmount = 0;
         List<String> slotIds = new ArrayList<>();
@@ -201,7 +201,6 @@ public class BookingService {
             for (co.sportverse.sportverse_backend.dto.CreateBookingRequest.SlotDto slotDto : slotDtos) {
                 if (slotDto.getPrice() > 0) {
                     totalAmount += slotDto.getPrice();
-                    slotDto.setBooked(true);
                 }
                 if (slotDto.getSlotId() != null) {
                     slotIds.add(slotDto.getSlotId());
@@ -209,11 +208,15 @@ public class BookingService {
             }
         }
         
-        // Create booking with CONFIRMED status, storing complete slot details
-        String bookingId = bookingRepository.createBookingDirect(partnerId, userId, venueId, slotDtos, date, totalAmount);
+        // Create booking with provided status and paymentStatus, storing complete slot details
+        String bookingId = bookingRepository.createBookingDirect(partnerId, userId, venueId, slotDtos, date, totalAmount, status, paymentStatus);
         
-        // Mark slots as booked in the slots collection
-        if (!slotIds.isEmpty()) {
+        // Only mark slots as booked if both paymentStatus and status are SUCCESS
+        // For booking status, SUCCESS or CONFIRMED are considered success states
+        boolean shouldMarkBooked = paymentStatus != null && "SUCCESS".equalsIgnoreCase(paymentStatus.trim()) && 
+                                   status != null && ("SUCCESS".equalsIgnoreCase(status.trim()));
+        
+        if (shouldMarkBooked && !slotIds.isEmpty()) {
             try {
                 slotsRepository.markSlotsBooked(venueId, date, slotIds);
             } catch (Exception e) {
@@ -223,6 +226,46 @@ public class BookingService {
         }
         
         return bookingId;
+    }
+    
+    public boolean confirmBooking(String bookingId) {
+        if (bookingId == null || bookingId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Booking ID is required");
+        }
+        
+        // Check if booking exists
+        org.bson.Document booking = bookingRepository.findById(bookingId.trim());
+        if (booking == null) {
+            return false;
+        }
+        
+        // Update booking status and payment status to SUCCESS
+        bookingRepository.confirmBooking(bookingId.trim());
+        
+        // Mark slots as booked in the slots collection
+        String venueId = booking.getObjectId("venueId").toString();
+        String date = booking.getString("date");
+        
+        @SuppressWarnings("unchecked")
+        List<Document> slotsDocs = (List<Document>) booking.get("slots");
+        if (slotsDocs != null && !slotsDocs.isEmpty()) {
+            List<String> slotIds = new ArrayList<>();
+            for (Document slotDoc : slotsDocs) {
+                String slotId = slotDoc.getString("slotId");
+                if (slotId != null) {
+                    slotIds.add(slotId);
+                }
+            }
+            if (!slotIds.isEmpty()) {
+                try {
+                    slotsRepository.markSlotsBooked(venueId, date, slotIds);
+                } catch (Exception e) {
+                    System.err.println("Failed to mark slots as booked: " + e.getMessage());
+                }
+            }
+        }
+        
+        return true;
     }
 
     public List<BookingItemResponse> getUserBookingsByMobileNumber(String mobileNumber) {

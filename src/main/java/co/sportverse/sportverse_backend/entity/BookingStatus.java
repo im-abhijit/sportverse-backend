@@ -4,7 +4,8 @@ public enum BookingStatus {
     INITIATED,
     PAID,
     FAILED,
-    CONFIRMED
+    SUCCESS,
+    PENDING,
 }
 
 

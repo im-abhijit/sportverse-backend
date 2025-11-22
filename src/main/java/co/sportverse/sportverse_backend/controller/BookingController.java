@@ -87,16 +87,19 @@ public class BookingController {
                 return ResponseEntity.badRequest().body(new ApiResponse(false, "slots are required"));
             }
 
-            // Create booking with CONFIRMED status (hardcoded)
+            // Create booking with provided status and paymentStatus
             String bookingId = bookingService.createBooking(
                     request.getPartnerId().trim(),
                     request.getUserId().trim(),
                     request.getVenueId().trim(),
                     request.getSlots(),
-                    request.getDate().trim()
+                    request.getDate().trim(),
+                    request.getStatus(),
+                    request.getPaymentStatus()
             );
 
-            logger.info("POST /api/bookings - Successfully created booking. bookingId: {}", bookingId);
+            logger.info("POST /api/bookings - Successfully created booking. bookingId: {}, status: {}, paymentStatus: {}", 
+                    bookingId, request.getStatus(), request.getPaymentStatus());
             return ResponseEntity.ok(new ApiResponse(true, "Booking created successfully", bookingId));
         } catch (Exception e) {
             logger.error("POST /api/bookings - Error creating booking. partnerId: {}, venueId: {}, userId: {}", 
@@ -122,6 +125,32 @@ public class BookingController {
         } catch (Exception e) {
             logger.error("GET /api/bookings/user/mobile/{} - Error fetching bookings", mobileNumber, e);
             return ResponseEntity.internalServerError().body(new ApiResponse(false, "Error fetching bookings: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{bookingId}/confirm")
+    public ResponseEntity<ApiResponse> confirmBooking(@PathVariable String bookingId) {
+        logger.info("POST /api/bookings/{}/confirm - Confirming booking", bookingId);
+        try {
+            if (bookingId == null || bookingId.trim().isEmpty()) {
+                logger.warn("POST /api/bookings/{}/confirm - Validation failed: bookingId is required", bookingId);
+                return ResponseEntity.badRequest().body(new ApiResponse(false, "bookingId is required"));
+            }
+
+            boolean confirmed = bookingService.confirmBooking(bookingId.trim());
+            if (!confirmed) {
+                logger.warn("POST /api/bookings/{}/confirm - Booking not found", bookingId);
+                return ResponseEntity.badRequest().body(new ApiResponse(false, "Booking not found"));
+            }
+
+            logger.info("POST /api/bookings/{}/confirm - Successfully confirmed booking", bookingId);
+            return ResponseEntity.ok(new ApiResponse(true, "Booking confirmed successfully"));
+        } catch (IllegalArgumentException e) {
+            logger.warn("POST /api/bookings/{}/confirm - Invalid request: {}", bookingId, e.getMessage());
+            return ResponseEntity.badRequest().body(new ApiResponse(false, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("POST /api/bookings/{}/confirm - Error confirming booking", bookingId, e);
+            return ResponseEntity.internalServerError().body(new ApiResponse(false, "Error confirming booking: " + e.getMessage()));
         }
     }
 }

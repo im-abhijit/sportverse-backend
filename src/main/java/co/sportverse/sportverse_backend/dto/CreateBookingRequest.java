@@ -8,6 +8,8 @@ public class CreateBookingRequest {
     private List<SlotDto> slots;
     private String date; // yyyy-MM-dd
     private String userId;
+    private String status;
+    private String paymentStatus;
 
     public static class SlotDto {
         private String slotId;
@@ -113,6 +115,22 @@ public class CreateBookingRequest {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }
 
