@@ -117,7 +117,7 @@ public class BookingController {
                 return ResponseEntity.badRequest().body(new ApiResponse(false, "Mobile number is required"));
             }
 
-            // Format phone number (ensure it starts with +)
+            // Use mobile number as-is (no formatting)
             String phoneNumber = mobileNumber.trim();
             List<BookingItemResponse> bookings = bookingService.getUserBookingsByMobileNumber(phoneNumber);
             logger.info("GET /api/bookings/user/mobile/{} - Successfully retrieved {} bookings", mobileNumber, bookings.size());

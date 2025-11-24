@@ -51,7 +51,7 @@ public class AuthController {
                     .body(new GenerateOtpResponse(false, "Phone number is required"));
             }
 
-            if(request.getPhoneNumber().equals("+918937828771")){
+            if(request.getPhoneNumber().equals("8937828771")){
                 logger.info("POST /api/auth/generate-otp - Using test phone number, returning sample response");
                 return ResponseEntity.ok(new GenerateOtpResponse(
                         true,
@@ -73,16 +73,23 @@ public class AuthController {
                     .body(new GenerateOtpResponse(false, "Invalid channel. Supported channels: sms, whatsapp"));
             }
 
-            // Format phone number (ensure it starts with +)
-            String phoneNumber = request.getPhoneNumber().trim();
-            if (!phoneNumber.startsWith("+")) {
-                phoneNumber = "+" + phoneNumber;
+            // Format phone number for Twilio: always append +91
+            String twilioPhoneNumber = request.getPhoneNumber().trim();
+            // Remove any existing + prefix
+            if (twilioPhoneNumber.startsWith("+")) {
+                twilioPhoneNumber = twilioPhoneNumber.substring(1);
             }
+            // Remove leading 0 if present
+            if (twilioPhoneNumber.startsWith("0")) {
+                twilioPhoneNumber = twilioPhoneNumber.substring(1);
+            }
+            // Always append +91 for Twilio
+            twilioPhoneNumber = "+91" + twilioPhoneNumber;
 
             // Send OTP using Twilio Verification API
-            Verification verification = otpService.sendOtp(phoneNumber, channel);
+            Verification verification = otpService.sendOtp(twilioPhoneNumber, channel);
             logger.info("POST /api/auth/generate-otp - Successfully sent OTP. phoneNumber: {}, channel: {}, sid: {}", 
-                    phoneNumber, channel, verification.getSid());
+                    twilioPhoneNumber, channel, verification.getSid());
             
             return ResponseEntity.ok(new GenerateOtpResponse(
                 true, 
@@ -110,7 +117,7 @@ public class AuthController {
                     .body(new VerifyOtpResponse(false, "Phone number is required"));
             }
 
-            if(request.getPhoneNumber().equals("+918937828771")){
+            if(request.getPhoneNumber().equals("8937828771")){
                 logger.info("POST /api/auth/verify-otp - Using test phone number, returning sample response");
                 return ResponseEntity.ok(new VerifyOtpResponse(
                         true,
@@ -129,33 +136,43 @@ public class AuthController {
                     .body(new VerifyOtpResponse(false, "OTP code is required"));
             }
 
-            // Format phone number (ensure it starts with +)
-            String phoneNumber = request.getPhoneNumber().trim();
-            if (!phoneNumber.startsWith("+")) {
-                phoneNumber = "+" + phoneNumber;
+            // Store original phone number from request (for saving user details)
+            String originalPhoneNumber = request.getPhoneNumber().trim();
+            
+            // Format phone number for Twilio: always append +91
+            String twilioPhoneNumber = originalPhoneNumber;
+            // Remove any existing + prefix
+            if (twilioPhoneNumber.startsWith("+")) {
+                twilioPhoneNumber = twilioPhoneNumber.substring(1);
             }
+            // Remove leading 0 if present
+            if (twilioPhoneNumber.startsWith("0")) {
+                twilioPhoneNumber = twilioPhoneNumber.substring(1);
+            }
+            // Always append +91 for Twilio
+            twilioPhoneNumber = "+91" + twilioPhoneNumber;
 
-            // Verify OTP using Twilio Verification API
-            VerificationCheck verificationCheck = otpService.verifyOtp(phoneNumber, request.getCode().trim());
+            // Verify OTP using Twilio Verification API (use +91 version)
+            VerificationCheck verificationCheck = otpService.verifyOtp(twilioPhoneNumber, request.getCode().trim());
             
             boolean isValid = verificationCheck.getValid();
             String status = verificationCheck.getStatus();
             
             if (isValid) {
-                // Check if user exists, if not create a new user
-                User existingUser = userService.getUserByMobileNumber(phoneNumber);
+                // Check if user exists, if not create a new user (use original phone number without +91)
+                User existingUser = userService.getUserByMobileNumber(originalPhoneNumber);
                 User user;
                 
                 if (existingUser != null) {
                     user = existingUser;
                     logger.info("POST /api/auth/verify-otp - OTP verified for existing user. userId: {}, phoneNumber: {}", 
-                            user.getId(), phoneNumber);
+                            user.getId(), originalPhoneNumber);
                 } else {
                     // Create new user with default name (can be updated later)
-                    String defaultName = "User_" + phoneNumber.substring(phoneNumber.length() - 4);
-                    user = userService.createUser(defaultName, phoneNumber, false);
+                    String defaultName = "User_" + originalPhoneNumber.substring(originalPhoneNumber.length() - 4);
+                    user = userService.createUser(defaultName, originalPhoneNumber, false);
                     logger.info("POST /api/auth/verify-otp - OTP verified, new user created. userId: {}, phoneNumber: {}", 
-                            user.getId(), phoneNumber);
+                            user.getId(), originalPhoneNumber);
                 }
                 
                 String message = existingUser != null ? 
@@ -172,7 +189,7 @@ public class AuthController {
                 ));
             } else {
                 logger.warn("POST /api/auth/verify-otp - Invalid OTP code. phoneNumber: {}, status: {}", 
-                        phoneNumber, status);
+                        twilioPhoneNumber, status);
                 return ResponseEntity.ok(new VerifyOtpResponse(
                     false, 
                     "Invalid OTP code", 

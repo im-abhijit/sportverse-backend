@@ -26,7 +26,7 @@ public class UserRepository {
     }
 
     public User findByMobileNo(String mobileNo) {
-        Bson filter = eq("userId", mobileNo);
+        Bson filter = eq("phone", mobileNo);
         User result = User.fromDocument(usersCollection.find(filter).first());
         return result;
     }
