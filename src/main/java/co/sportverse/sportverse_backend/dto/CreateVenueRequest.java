@@ -15,6 +15,7 @@ public class CreateVenueRequest {
     private String qrCodeImage;
     private String upiId;
     private List<String> amenities;
+    private String thumbnailUrl;
 
     public CreateVenueRequest() {}
 
@@ -118,6 +119,14 @@ public class CreateVenueRequest {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public String getThumbnailUrl() {
+        return thumbnailUrl;
+    }
+
+    public void setThumbnailUrl(String thumbnailUrl) {
+        this.thumbnailUrl = thumbnailUrl;
     }
 }
 

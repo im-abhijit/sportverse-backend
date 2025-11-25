@@ -17,6 +17,7 @@ public class VenueResponse {
     private String qrCodeImage;
     private String upiId;
     private List<String> amenities;
+    private String thumbnailUrl;
 
     public VenueResponse() {}
 
@@ -33,6 +34,7 @@ public class VenueResponse {
         this.qrCodeImage = venue.getQrCodeImage();
         this.upiId = venue.getUpiId();
         this.amenities = venue.getAmenities();
+        this.thumbnailUrl = venue.getThumbnailUrl();
     }
 
     public String getId() {
@@ -129,6 +131,14 @@ public class VenueResponse {
 
     public void setAmenities(List<String> amenities) {
         this.amenities = amenities;
+    }
+
+    public String getThumbnailUrl() {
+        return thumbnailUrl;
+    }
+
+    public void setThumbnailUrl(String thumbnailUrl) {
+        this.thumbnailUrl = thumbnailUrl;
     }
 }
 

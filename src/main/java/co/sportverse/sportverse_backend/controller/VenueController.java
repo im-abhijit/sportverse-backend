@@ -111,7 +111,9 @@ public class VenueController {
                         request.getPartnerMobileNo(),
                         request.getQrCodeImage(),
                         request.getUpiId(),
-                        request.getAmenities()
+                        request.getAmenities(),
+                            request.getThumbnailUrl()
+
                     );
                     savedVenue = venueRepository.save(venue);
                     logger.info("POST /api/venues - Successfully created venue. venueId: {}", savedVenue.getId());
@@ -130,7 +132,8 @@ public class VenueController {
                     request.getPartnerMobileNo(),
                     request.getQrCodeImage(),
                     request.getUpiId(),
-                    request.getAmenities()
+                    request.getAmenities(),
+                        request.getThumbnailUrl()
                 );
                 savedVenue = venueRepository.save(venue);
                 logger.info("POST /api/venues - Successfully created venue. venueId: {}", savedVenue.getId());

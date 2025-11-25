@@ -18,11 +18,12 @@ public class Venue {
     String qrCodeImage;
     String upiId;
     List<String> amenities;
+    String thumbnailUrl;
 
     // Constructors
     public Venue() {}
 
-    public Venue(String name, String description, List<String> games, String location, List<String> photos, String partnerId, String city, String partnerMobileNo, String qrCodeImage, String upiId, List<String> amenities) {
+    public Venue(String name, String description, List<String> games, String location, List<String> photos, String partnerId, String city, String partnerMobileNo, String qrCodeImage, String upiId, List<String> amenities, String thumbnailUrl) {
         this.name = name;
         this.description = description;
         this.games = games;
@@ -34,6 +35,7 @@ public class Venue {
         this.qrCodeImage = qrCodeImage;
         this.upiId = upiId;
         this.amenities = amenities;
+        this.thumbnailUrl = thumbnailUrl;
     }
 
     // Getters and Setters
@@ -133,6 +135,14 @@ public class Venue {
         this.amenities = amenities;
     }
 
+    public String getThumbnailUrl() {
+        return thumbnailUrl;
+    }
+
+    public void setThumbnailUrl(String thumbnailUrl) {
+        this.thumbnailUrl = thumbnailUrl;
+    }
+
     @Override
     public String toString() {
         return "Venue{" +
@@ -162,6 +172,7 @@ public class Venue {
         venue.setQrCodeImage(doc.getString("qrCodeImage"));
         venue.setUpiId(doc.getString("upiId"));
         venue.setAmenities(doc.getList("amenities", String.class));
+        venue.setThumbnailUrl(doc.getString("thumbnailUrl"));
         return venue;
     }
 
@@ -181,6 +192,7 @@ public class Venue {
         doc.append("qrCodeImage", this.qrCodeImage);
         doc.append("upiId", this.upiId);
         doc.append("amenities", this.amenities);
+        doc.append("thumbnailUrl", this.thumbnailUrl);
         return doc;
     }
 
