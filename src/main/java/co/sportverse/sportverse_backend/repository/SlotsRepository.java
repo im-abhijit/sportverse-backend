@@ -59,6 +59,25 @@ public class SlotsRepository {
         }
     }
 
+    public void markSlotsFree(String venueId, String date, java.util.List<String> slotIds) {
+        if (slotIds == null || slotIds.isEmpty()) return;
+        Bson filter = and(eq("venueId", new org.bson.types.ObjectId(venueId)), eq("date", date));
+        Document doc = slotsCollection.find(filter).first();
+        if (doc == null) return;
+        java.util.List<Document> slotDocs = (java.util.List<Document>) doc.get("slots");
+        if (slotDocs != null) {
+            java.util.Set<String> target = new java.util.HashSet<>(slotIds);
+            for (Document s : slotDocs) {
+                String sid = s.getString("slotId");
+                if (sid != null && target.contains(sid)) {
+                    s.put("isBooked", false);
+                }
+            }
+            doc.put("slots", slotDocs);
+            slotsCollection.replaceOne(filter, doc);
+        }
+    }
+
     public VenueSlots updateSlots(VenueSlots venueSlots) {
         Bson filter = and(eq("venueId", new org.bson.types.ObjectId(venueSlots.getVenueId())), eq("date", venueSlots.getDate()));
         Document doc = venueSlots.toDocument();

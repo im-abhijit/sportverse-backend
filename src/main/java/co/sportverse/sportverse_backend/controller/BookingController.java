@@ -153,6 +153,32 @@ public class BookingController {
             return ResponseEntity.internalServerError().body(new ApiResponse(false, "Error confirming booking: " + e.getMessage()));
         }
     }
+
+    @DeleteMapping("/{bookingId}")
+    public ResponseEntity<ApiResponse> cancelBooking(@PathVariable String bookingId) {
+        logger.info("DELETE /api/bookings/{} - Cancelling booking", bookingId);
+        try {
+            if (bookingId == null || bookingId.trim().isEmpty()) {
+                logger.warn("DELETE /api/bookings/{} - Validation failed: bookingId is required", bookingId);
+                return ResponseEntity.badRequest().body(new ApiResponse(false, "bookingId is required"));
+            }
+
+            boolean cancelled = bookingService.cancelBooking(bookingId.trim());
+            if (!cancelled) {
+                logger.warn("DELETE /api/bookings/{} - Booking not found", bookingId);
+                return ResponseEntity.badRequest().body(new ApiResponse(false, "Booking not found"));
+            }
+
+            logger.info("DELETE /api/bookings/{} - Successfully cancelled booking", bookingId);
+            return ResponseEntity.ok(new ApiResponse(true, "Booking cancelled successfully"));
+        } catch (IllegalArgumentException e) {
+            logger.warn("DELETE /api/bookings/{} - Invalid request: {}", bookingId, e.getMessage());
+            return ResponseEntity.badRequest().body(new ApiResponse(false, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("DELETE /api/bookings/{} - Error cancelling booking", bookingId, e);
+            return ResponseEntity.internalServerError().body(new ApiResponse(false, "Error cancelling booking: " + e.getMessage()));
+        }
+    }
 }
 
 

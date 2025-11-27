@@ -186,6 +186,22 @@ public class BookingRepository {
             throw new IllegalArgumentException("Invalid booking ID format: " + bookingId);
         }
     }
+    
+    public void cancelBooking(String bookingId) {
+        if (bookingId == null || bookingId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Booking ID is required");
+        }
+        try {
+            Bson filter = eq("_id", new org.bson.types.ObjectId(bookingId.trim()));
+            Instant now = Instant.now();
+            bookingsCollection.updateOne(filter, combine(
+                    set("bookingStatus", BookingStatus.CANCELLED.name()),
+                    set("updatedAt", now)
+            ));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid booking ID format: " + bookingId);
+        }
+    }
 }
 
 

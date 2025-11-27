@@ -8,11 +8,9 @@ import co.sportverse.sportverse_backend.entity.VenueSlots;
 import co.sportverse.sportverse_backend.entity.User;
 import co.sportverse.sportverse_backend.repository.BookingRepository;
 import co.sportverse.sportverse_backend.repository.PartnerRepository;
-import co.sportverse.sportverse_backend.repository.PushSubscriptionRepository;
 import co.sportverse.sportverse_backend.repository.SlotsRepository;
 import co.sportverse.sportverse_backend.repository.VenueRepository;
 import co.sportverse.sportverse_backend.service.UserService;
-import co.sportverse.sportverse_backend.entity.PushSubscription;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -38,10 +36,10 @@ public class BookingService {
     private PartnerRepository partnerRepository;
 
     @Autowired
-    private PushSubscriptionRepository pushSubscriptionRepository;
+    private UserService userService;
 
     @Autowired
-    private UserService userService;
+    private ExpoPushNotificationService expoPushNotificationService;
 
     @Autowired
     private co.sportverse.sportverse_backend.service.NotificationService notificationService;
@@ -233,43 +231,33 @@ public class BookingService {
             }
         }
 
-        // Send FCM notification if status and paymentStatus are PENDING
+        // Send Expo notification if status and paymentStatus are PENDING
         boolean shouldSendNotification = paymentStatus != null && "PENDING".equalsIgnoreCase(paymentStatus.trim()) && 
                                         status != null && "PENDING".equalsIgnoreCase(status.trim());
         
         if (shouldSendNotification) {
             try {
-                // Get push subscription for the partner from the new collection
-                PushSubscription subscription = pushSubscriptionRepository.findByPartnerId(partnerId);
-                if (subscription != null && subscription.getEndpoint() != null && !subscription.getEndpoint().trim().isEmpty()) {
+                // Get Expo token for the partner
+                String expoToken = partnerRepository.getExpoToken(partnerId);
+                if (expoToken != null && !expoToken.trim().isEmpty()) {
                     // Get venue details for notification
                     Venue venue = venueRepository.findById(venueId);
                     String venueName = venue != null ? venue.getName() : "Unknown Venue";
                     
-                    // Send notification using Web Push Protocol with VAPID
-                    notificationService.sendBookingNotification(
-                            subscription.getEndpoint(),
-                            subscription.getP256dh(),
-                            subscription.getAuth(),
+                    // Send notification using Expo Server SDK
+                    expoPushNotificationService.sendBookingNotification(
+                            expoToken,
                             bookingId,
                             venueName,
                             date,
                             String.valueOf(totalAmount)
                     );
                 } else {
-                    // Fallback to Expo token if subscription not found
-                    String expoToken = partnerRepository.getExpoToken(partnerId);
-                    if (expoToken != null && !expoToken.trim().isEmpty()) {
-                        // TODO: Implement Expo push notification sending
-                        // For now, just log that Expo token is available
-
-                    } else {
-
-                    }
+                    System.err.println("Expo token not found for partner: " + partnerId);
                 }
             } catch (Exception e) {
                 // Log error but don't fail booking creation
-                System.err.println("Failed to send FCM notification: " + e.getMessage());
+                System.err.println("Failed to send Expo notification: " + e.getMessage());
             }
         }
         
@@ -319,6 +307,46 @@ public class BookingService {
     public List<BookingItemResponse> getUserBookingsByMobileNumber(String mobileNumber) {
         // Find user by mobile number
         return getUserBookings(mobileNumber);
+    }
+    
+    public boolean cancelBooking(String bookingId) {
+        if (bookingId == null || bookingId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Booking ID is required");
+        }
+        
+        // Check if booking exists
+        org.bson.Document booking = bookingRepository.findById(bookingId.trim());
+        if (booking == null) {
+            return false;
+        }
+        
+        // Update booking status to CANCELLED
+        bookingRepository.cancelBooking(bookingId.trim());
+        
+        // Mark slots as free in the slots collection
+        String venueId = booking.getObjectId("venueId").toString();
+        String date = booking.getString("date");
+        
+        @SuppressWarnings("unchecked")
+        List<Document> slotsDocs = (List<Document>) booking.get("slots");
+        if (slotsDocs != null && !slotsDocs.isEmpty()) {
+            List<String> slotIds = new ArrayList<>();
+            for (Document slotDoc : slotsDocs) {
+                String slotId = slotDoc.getString("slotId");
+                if (slotId != null) {
+                    slotIds.add(slotId);
+                }
+            }
+            if (!slotIds.isEmpty()) {
+                try {
+                    slotsRepository.markSlotsFree(venueId, date, slotIds);
+                } catch (Exception e) {
+                    System.err.println("Failed to mark slots as free: " + e.getMessage());
+                }
+            }
+        }
+        
+        return true;
     }
 }
 
