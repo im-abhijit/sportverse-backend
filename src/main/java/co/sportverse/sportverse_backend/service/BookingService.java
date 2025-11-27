@@ -262,9 +262,9 @@ public class BookingService {
                     if (expoToken != null && !expoToken.trim().isEmpty()) {
                         // TODO: Implement Expo push notification sending
                         // For now, just log that Expo token is available
-                        logger.info("Expo token found for partner: {}, but Expo push notifications not yet implemented", partnerId);
+
                     } else {
-                        logger.warn("No push subscription or Expo token found for partner: {}", partnerId);
+
                     }
                 }
             } catch (Exception e) {
