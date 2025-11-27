@@ -13,6 +13,7 @@ import java.util.List;
 
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.addToSet;
+import static com.mongodb.client.model.Updates.set;
 
 @Component
 public class PartnerRepository {
@@ -56,6 +57,25 @@ public class PartnerRepository {
         }
         // Add venue ID to the venues array (using addToSet to avoid duplicates)
         partnersCollection.updateOne(filter, addToSet("venues", new org.bson.types.ObjectId(venueId)));
+    }
+
+    public boolean updateExpoToken(String partnerId, String expoToken) {
+        Bson filter = eq("partnerId", partnerId);
+        Document partner = partnersCollection.find(filter).first();
+        if (partner == null) {
+            return false; // Partner not found
+        }
+        partnersCollection.updateOne(filter, set("expoToken", expoToken));
+        return true;
+    }
+
+    public String getExpoToken(String partnerId) {
+        Bson filter = eq("partnerId", partnerId);
+        Document partner = partnersCollection.find(filter).first();
+        if (partner == null) {
+            return null;
+        }
+        return partner.getString("expoToken");
     }
 }
 

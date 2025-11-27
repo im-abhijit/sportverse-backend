@@ -8,9 +8,11 @@ import co.sportverse.sportverse_backend.entity.VenueSlots;
 import co.sportverse.sportverse_backend.entity.User;
 import co.sportverse.sportverse_backend.repository.BookingRepository;
 import co.sportverse.sportverse_backend.repository.PartnerRepository;
+import co.sportverse.sportverse_backend.repository.PushSubscriptionRepository;
 import co.sportverse.sportverse_backend.repository.SlotsRepository;
 import co.sportverse.sportverse_backend.repository.VenueRepository;
 import co.sportverse.sportverse_backend.service.UserService;
+import co.sportverse.sportverse_backend.entity.PushSubscription;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -36,7 +38,13 @@ public class BookingService {
     private PartnerRepository partnerRepository;
 
     @Autowired
+    private PushSubscriptionRepository pushSubscriptionRepository;
+
+    @Autowired
     private UserService userService;
+
+    @Autowired
+    private co.sportverse.sportverse_backend.service.NotificationService notificationService;
 
     public List<BookingItemResponse> getUserBookings(String userId) {
         List<Document> bookingDocs = bookingRepository.findByUserId(userId);
@@ -222,6 +230,46 @@ public class BookingService {
             } catch (Exception e) {
                 // Log error but don't fail booking creation
                 System.err.println("Failed to mark slots as booked: " + e.getMessage());
+            }
+        }
+
+        // Send FCM notification if status and paymentStatus are PENDING
+        boolean shouldSendNotification = paymentStatus != null && "PENDING".equalsIgnoreCase(paymentStatus.trim()) && 
+                                        status != null && "PENDING".equalsIgnoreCase(status.trim());
+        
+        if (shouldSendNotification) {
+            try {
+                // Get push subscription for the partner from the new collection
+                PushSubscription subscription = pushSubscriptionRepository.findByPartnerId(partnerId);
+                if (subscription != null && subscription.getEndpoint() != null && !subscription.getEndpoint().trim().isEmpty()) {
+                    // Get venue details for notification
+                    Venue venue = venueRepository.findById(venueId);
+                    String venueName = venue != null ? venue.getName() : "Unknown Venue";
+                    
+                    // Send notification using Web Push Protocol with VAPID
+                    notificationService.sendBookingNotification(
+                            subscription.getEndpoint(),
+                            subscription.getP256dh(),
+                            subscription.getAuth(),
+                            bookingId,
+                            venueName,
+                            date,
+                            String.valueOf(totalAmount)
+                    );
+                } else {
+                    // Fallback to Expo token if subscription not found
+                    String expoToken = partnerRepository.getExpoToken(partnerId);
+                    if (expoToken != null && !expoToken.trim().isEmpty()) {
+                        // TODO: Implement Expo push notification sending
+                        // For now, just log that Expo token is available
+                        logger.info("Expo token found for partner: {}, but Expo push notifications not yet implemented", partnerId);
+                    } else {
+                        logger.warn("No push subscription or Expo token found for partner: {}", partnerId);
+                    }
+                }
+            } catch (Exception e) {
+                // Log error but don't fail booking creation
+                System.err.println("Failed to send FCM notification: " + e.getMessage());
             }
         }
         
