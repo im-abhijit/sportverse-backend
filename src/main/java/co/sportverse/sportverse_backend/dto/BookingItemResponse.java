@@ -11,6 +11,7 @@ public class BookingItemResponse {
     private String bookingStatus;
     private String paymentStatus;
     private String paymentScreenshotUrl;
+    private String userId;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -30,6 +31,14 @@ public class BookingItemResponse {
 
     public void setPaymentScreenshotUrl(String paymentScreenshotUrl) {
         this.paymentScreenshotUrl = paymentScreenshotUrl;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 }
 

@@ -138,6 +138,7 @@ public class BookingService {
             item.setAmount(doc.getInteger("amount", 0));
             item.setBookingStatus(doc.getString("bookingStatus"));
             item.setPaymentScreenshotUrl(doc.getString("paymentScreenshotUrl"));
+            item.setUserId(doc.getString("userId"));
             Document paymentDoc = (Document) doc.get("payment");
             if (paymentDoc != null) {
                 item.setPaymentStatus(paymentDoc.getString("status"));
