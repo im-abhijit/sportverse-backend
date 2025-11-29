@@ -10,6 +10,7 @@ public class CreateBookingRequest {
     private String userId;
     private String status;
     private String paymentStatus;
+    private String paymentScreenshotUrl;
 
     public static class SlotDto {
         private String slotId;
@@ -131,6 +132,14 @@ public class CreateBookingRequest {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getPaymentScreenshotUrl() {
+        return paymentScreenshotUrl;
+    }
+
+    public void setPaymentScreenshotUrl(String paymentScreenshotUrl) {
+        this.paymentScreenshotUrl = paymentScreenshotUrl;
     }
 }
 

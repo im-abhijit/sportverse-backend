@@ -56,7 +56,7 @@ public class BookingService {
             item.setDate(date);
             item.setAmount(doc.getInteger("amount", 0));
             item.setBookingStatus(doc.getString("bookingStatus"));
-
+            item.setPaymentScreenshotUrl(doc.getString("paymentScreenshotUrl"));
             Document paymentDoc = (Document) doc.get("payment");
             if (paymentDoc != null) {
                 item.setPaymentStatus(paymentDoc.getString("status"));
@@ -137,7 +137,7 @@ public class BookingService {
             item.setDate(date);
             item.setAmount(doc.getInteger("amount", 0));
             item.setBookingStatus(doc.getString("bookingStatus"));
-
+            item.setPaymentScreenshotUrl(doc.getString("paymentScreenshotUrl"));
             Document paymentDoc = (Document) doc.get("payment");
             if (paymentDoc != null) {
                 item.setPaymentStatus(paymentDoc.getString("status"));
@@ -198,7 +198,7 @@ public class BookingService {
         return responses;
     }
 
-    public String createBooking(String partnerId, String userId, String venueId, List<co.sportverse.sportverse_backend.dto.CreateBookingRequest.SlotDto> slotDtos, String date, String status, String paymentStatus) {
+    public String createBooking(String partnerId, String userId, String venueId, List<co.sportverse.sportverse_backend.dto.CreateBookingRequest.SlotDto> slotDtos, String date, String status, String paymentStatus, String paymentScreenshotUrl) {
         // Calculate total amount from slot DTOs and extract slot IDs
         int totalAmount = 0;
         List<String> slotIds = new ArrayList<>();
@@ -215,7 +215,7 @@ public class BookingService {
         }
         
         // Create booking with provided status and paymentStatus, storing complete slot details
-        String bookingId = bookingRepository.createBookingDirect(partnerId, userId, venueId, slotDtos, date, totalAmount, status, paymentStatus);
+        String bookingId = bookingRepository.createBookingDirect(partnerId, userId, venueId, slotDtos, date, totalAmount, status, paymentStatus, paymentScreenshotUrl);
         
         // Only mark slots as booked if both paymentStatus and status are SUCCESS
         // For booking status, SUCCESS or CONFIRMED are considered success states

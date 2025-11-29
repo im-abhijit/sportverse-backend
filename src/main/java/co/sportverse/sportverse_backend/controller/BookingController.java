@@ -95,7 +95,8 @@ public class BookingController {
                     request.getSlots(),
                     request.getDate().trim(),
                     request.getStatus(),
-                    request.getPaymentStatus()
+                    request.getPaymentStatus(),
+                    request.getPaymentScreenshotUrl()
             );
 
             logger.info("POST /api/bookings - Successfully created booking. bookingId: {}, status: {}, paymentStatus: {}", 

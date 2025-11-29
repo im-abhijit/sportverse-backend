@@ -117,7 +117,7 @@ public class BookingRepository {
                 .into(new ArrayList<>());
     }
 
-    public String createBookingDirect(String partnerId, String userId, String venueId, List<co.sportverse.sportverse_backend.dto.CreateBookingRequest.SlotDto> slotDtos, String date, int amount, String status, String paymentStatus) {
+    public String createBookingDirect(String partnerId, String userId, String venueId, List<co.sportverse.sportverse_backend.dto.CreateBookingRequest.SlotDto> slotDtos, String date, int amount, String status, String paymentStatus, String paymentScreenshotUrl) {
         Instant now = Instant.now();
         List<Document> slotsList = new ArrayList<>();
         if (slotDtos != null) {
@@ -153,7 +153,8 @@ public class BookingRepository {
                 )
                 .append("bookingStatus", bookingStatusValue)
                 .append("createdAt", now)
-                .append("updatedAt", now);
+                .append("updatedAt", now)
+                .append("paymentScreenshotUrl", paymentScreenshotUrl);
         bookingsCollection.insertOne(booking);
         return booking.getObjectId("_id").toString();
     }
