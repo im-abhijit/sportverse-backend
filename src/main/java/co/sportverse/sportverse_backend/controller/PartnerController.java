@@ -37,14 +37,14 @@ public class PartnerController {
                 return ResponseEntity.badRequest().body(new ApiResponse(false, "expoToken is required"));
             }
 
-            boolean updated = partnerRepository.updateExpoToken(partnerId.trim(), request.getExpoToken().trim());
+            boolean updated = partnerRepository.addExpoToken(partnerId.trim(), request.getExpoToken().trim());
             if (!updated) {
                 logger.warn("POST /api/partners/{}/expo-token - Partner not found", partnerId);
                 return ResponseEntity.badRequest().body(new ApiResponse(false, "Partner not found"));
             }
 
-            logger.info("POST /api/partners/{}/expo-token - Successfully updated Expo token", partnerId);
-            return ResponseEntity.ok(new ApiResponse(true, "Expo token updated successfully"));
+            logger.info("POST /api/partners/{}/expo-token - Successfully added Expo token", partnerId);
+            return ResponseEntity.ok(new ApiResponse(true, "Expo token added successfully"));
         } catch (Exception e) {
             logger.error("POST /api/partners/{}/expo-token - Error updating Expo token", partnerId, e);
             return ResponseEntity.internalServerError().body(new ApiResponse(false, "Error updating Expo token: " + e.getMessage()));

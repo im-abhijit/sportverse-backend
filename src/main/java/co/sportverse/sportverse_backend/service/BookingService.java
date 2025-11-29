@@ -128,8 +128,13 @@ public class BookingService {
         List<Document> bookingDocs = bookingRepository.findByVenueIds(venueIds);
         List<BookingItemResponse> responses = new ArrayList<>();
 
-        // 3. Build response objects
+        // 3. Build response objects (filter out cancelled bookings)
         for (Document doc : bookingDocs) {
+            // Skip cancelled bookings
+            String bookingStatus = doc.getString("bookingStatus");
+            if (bookingStatus != null && "CANCELLED".equalsIgnoreCase(bookingStatus)) {
+                continue;
+            }
             BookingItemResponse item = new BookingItemResponse();
             item.setId(doc.getObjectId("_id").toString());
             String venueId = doc.getObjectId("venueId").toString();
@@ -238,23 +243,23 @@ public class BookingService {
         
         if (shouldSendNotification) {
             try {
-                // Get Expo token for the partner
-                String expoToken = partnerRepository.getExpoToken(partnerId);
-                if (expoToken != null && !expoToken.trim().isEmpty()) {
+                // Get Expo tokens for the partner
+                List<String> expoTokens = partnerRepository.getExpoTokens(partnerId);
+                if (expoTokens != null && !expoTokens.isEmpty()) {
                     // Get venue details for notification
                     Venue venue = venueRepository.findById(venueId);
                     String venueName = venue != null ? venue.getName() : "Unknown Venue";
                     
-                    // Send notification using Expo Server SDK
+                    // Send notification to all tokens using Expo Server SDK
                     expoPushNotificationService.sendBookingNotification(
-                            expoToken,
+                            expoTokens,
                             bookingId,
                             venueName,
                             date,
                             String.valueOf(totalAmount)
                     );
                 } else {
-                    System.err.println("Expo token not found for partner: " + partnerId);
+                    System.err.println("Expo tokens not found for partner: " + partnerId);
                 }
             } catch (Exception e) {
                 // Log error but don't fail booking creation

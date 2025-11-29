@@ -59,23 +59,42 @@ public class PartnerRepository {
         partnersCollection.updateOne(filter, addToSet("venues", new org.bson.types.ObjectId(venueId)));
     }
 
-    public boolean updateExpoToken(String partnerId, String expoToken) {
+    public boolean addExpoToken(String partnerId, String expoToken) {
         Bson filter = eq("partnerId", partnerId);
         Document partner = partnersCollection.find(filter).first();
         if (partner == null) {
             return false; // Partner not found
         }
-        partnersCollection.updateOne(filter, set("expoToken", expoToken));
+        
+        // Check if expoTokens field exists
+        Object expoTokensObj = partner.get("expoTokens");
+        if (expoTokensObj == null) {
+            // Create new list with the token
+            List<String> tokens = new ArrayList<>();
+            tokens.add(expoToken.trim());
+            partnersCollection.updateOne(filter, set("expoTokens", tokens));
+        } else {
+            // Add to existing list (using addToSet to avoid duplicates)
+            partnersCollection.updateOne(filter, addToSet("expoTokens", expoToken.trim()));
+        }
+        
         return true;
     }
 
-    public String getExpoToken(String partnerId) {
+    public List<String> getExpoTokens(String partnerId) {
         Bson filter = eq("partnerId", partnerId);
         Document partner = partnersCollection.find(filter).first();
         if (partner == null) {
-            return null;
+            return new ArrayList<>();
         }
-        return partner.getString("expoToken");
+        
+        @SuppressWarnings("unchecked")
+        List<String> tokens = (List<String>) partner.get("expoTokens");
+        if (tokens == null) {
+            return new ArrayList<>();
+        }
+        
+        return new ArrayList<>(tokens);
     }
 }
 

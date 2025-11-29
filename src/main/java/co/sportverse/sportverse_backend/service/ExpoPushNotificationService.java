@@ -69,6 +69,40 @@ public class ExpoPushNotificationService {
         return "ERROR";
     }
 
+    public String sendNotificationToMultiple(List<String> expoPushTokens, String title, String message) {
+        if (expoPushTokens == null || expoPushTokens.isEmpty()) {
+            return "ERROR";
+        }
+
+        try {
+            PushNotification notification = new PushNotification();
+            notification.setTo(expoPushTokens);
+            notification.setTitle(title);
+            notification.setBody(message);
+            notification.setChannelId("booking-alert");
+            List<PushNotification> notifications = new ArrayList<>();
+            notifications.add(notification);
+
+            List<TicketResponse.Ticket> response = client.sendPushNotifications(notifications);
+
+            // Check if all notifications were sent successfully
+            boolean allSuccess = true;
+            for (TicketResponse.Ticket ticket : response) {
+                System.out.println("Expo Ticket ID: " + ticket.getId());
+                System.out.println("Status: " + ticket.getStatus());
+                if (!"OK".equalsIgnoreCase(ticket.getStatus().name())) {
+                    allSuccess = false;
+                }
+            }
+
+            return allSuccess ? "OK" : "ERROR";
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "ERROR";
+        }
+    }
+
     public String sendBookingNotification(String expoToken, String bookingId, String venueName, String date, String amount) {
         String title = "New Booking Received";
         String body = String.format("New booking for %s on %s - ₹%s", venueName, date, amount);
@@ -81,6 +115,13 @@ public class ExpoPushNotificationService {
         data.put("type", "new_booking");
 
         return sendNotification(expoToken, title, body);
+    }
+
+    public String sendBookingNotification(List<String> expoTokens, String bookingId, String venueName, String date, String amount) {
+        String title = "New Booking Received";
+        String body = String.format("New booking for %s on %s - ₹%s", venueName, date, amount);
+
+        return sendNotificationToMultiple(expoTokens, title, body);
     }
 
 }
