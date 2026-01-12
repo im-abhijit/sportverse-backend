@@ -12,6 +12,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
 @RestController
 @RequestMapping("/api/slots")
 @CrossOrigin(origins = {
@@ -80,6 +83,43 @@ public class SlotsController {
         } catch (Exception e) {
             logger.error("GET /api/slots - Error fetching slots for venueId: {}, date: {}", venueId, date, e);
             return ResponseEntity.internalServerError().body(new ApiResponse(false, "Error fetching slots: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/next-days")
+    public ResponseEntity<ApiResponse> createSlotsForNextDays(@RequestBody CreateSlotsRequest request) {
+        logger.info("POST /api/slots/next-days - Creating slots for venueId: {}, slots count: {}", 
+                request.getVenueId(), 
+                request.getSlots() != null ? request.getSlots().size() : 0);
+        try {
+            if (request.getVenueId() == null || request.getVenueId().trim().isEmpty()) {
+                logger.warn("POST /api/slots/next-days - Validation failed: venueId is required");
+                return ResponseEntity.badRequest().body(new ApiResponse(false, "venueId is required"));
+            }
+            if (request.getSlots() == null || request.getSlots().isEmpty()) {
+                logger.warn("POST /api/slots/next-days - Validation failed: slots are required");
+                return ResponseEntity.badRequest().body(new ApiResponse(false, "slots are required"));
+            }
+
+            // Calculate date as current date + 15 days
+            LocalDate currentDate = LocalDate.now();
+            LocalDate targetDate = currentDate.plusDays(15);
+            String dateString = targetDate.format(DateTimeFormatter.ISO_LOCAL_DATE);
+            
+            // Set the calculated date in the request
+            request.setDate(dateString);
+            
+            logger.info("POST /api/slots/next-days - Calculated date: {} (current date: {} + 15 days)", 
+                    dateString, currentDate);
+
+            VenueSlots saved = slotsService.createSlots(request);
+            logger.info("POST /api/slots/next-days - Successfully created slots. Document ID: {}, Total slots: {}, Date: {}", 
+                    saved.getId(), saved.getSlots() != null ? saved.getSlots().size() : 0, dateString);
+            return ResponseEntity.ok(new ApiResponse(true, "Slots created successfully", new SlotsResponse(saved)));
+        } catch (Exception e) {
+            logger.error("POST /api/slots/next-days - Error creating slots for venueId: {}", 
+                    request.getVenueId(), e);
+            return ResponseEntity.internalServerError().body(new ApiResponse(false, "Error creating slots: " + e.getMessage()));
         }
     }
 
