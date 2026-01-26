@@ -48,10 +48,24 @@ public class SlotsService {
             java.util.List<TimeSlot> mergedSlots = new java.util.ArrayList<>(existing.getSlots());
             mergedSlots.addAll(newSlots);
             
+            // Sort merged slots by start time
+            mergedSlots.sort((slot1, slot2) -> {
+                int start1Minutes = timeToMinutes12Hour(slot1.getStartTime(), slot1.getStartTimeAmPm());
+                int start2Minutes = timeToMinutes12Hour(slot2.getStartTime(), slot2.getStartTimeAmPm());
+                return Integer.compare(start1Minutes, start2Minutes);
+            });
+            
             // Update existing document with merged slots
             existing.setSlots(mergedSlots);
             return slotsRepository.updateSlots(existing);
         } else {
+            // Sort new slots by start time before saving
+            newSlots.sort((slot1, slot2) -> {
+                int start1Minutes = timeToMinutes12Hour(slot1.getStartTime(), slot1.getStartTimeAmPm());
+                int start2Minutes = timeToMinutes12Hour(slot2.getStartTime(), slot2.getStartTimeAmPm());
+                return Integer.compare(start1Minutes, start2Minutes);
+            });
+            
             // No existing slots, create new
             VenueSlots venueSlots = new VenueSlots(request.getVenueId(), request.getDate(), newSlots);
             return slotsRepository.save(venueSlots);
@@ -160,7 +174,18 @@ public class SlotsService {
         if (date == null || date.trim().isEmpty()) {
             throw new IllegalArgumentException("date is required (yyyy-MM-dd)");
         }
-        return slotsRepository.findByVenueIdAndDate(venueId.trim(), date.trim());
+        VenueSlots venueSlots = slotsRepository.findByVenueIdAndDate(venueId.trim(), date.trim());
+        
+        // Sort slots by start time if slots exist
+        if (venueSlots != null && venueSlots.getSlots() != null && !venueSlots.getSlots().isEmpty()) {
+            venueSlots.getSlots().sort((slot1, slot2) -> {
+                int start1Minutes = timeToMinutes12Hour(slot1.getStartTime(), slot1.getStartTimeAmPm());
+                int start2Minutes = timeToMinutes12Hour(slot2.getStartTime(), slot2.getStartTimeAmPm());
+                return Integer.compare(start1Minutes, start2Minutes);
+            });
+        }
+        
+        return venueSlots;
     }
 
     public boolean deleteSlot(String venueId, String date, String slotId) {
