@@ -57,13 +57,13 @@ public class PaymentService {
                 throw new RuntimeException("Failed to persist booking: " + e.getMessage());
             }
 
-            // 2️⃣ Create Razorpay order
+            // 2️⃣ Create Razorpay order (receipt max 40 chars; use bookingId)
             int amountInPaise = amountInRupees * 100;
             JSONObject orderRequest = new JSONObject();
             orderRequest.put("amount", amountInPaise);
             orderRequest.put("currency", "INR");
-            String slotsPart = (slotIds != null && !slotIds.isEmpty()) ? String.join(",", slotIds) : "no-slots";
-            orderRequest.put("receipt", venueId + ":" + slotsPart + ":" + date);
+            String receipt = bookingId.length() <= 40 ? bookingId : bookingId.substring(0, 40);
+            orderRequest.put("receipt", receipt);
 
             Order order = client().orders.create(orderRequest);
 
