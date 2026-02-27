@@ -18,6 +18,7 @@ public class VenueResponse {
     private String upiId;
     private List<String> amenities;
     private String thumbnailUrl;
+    private String venueMode;
 
     public VenueResponse() {}
 
@@ -35,6 +36,7 @@ public class VenueResponse {
         this.upiId = venue.getUpiId();
         this.amenities = venue.getAmenities();
         this.thumbnailUrl = venue.getThumbnailUrl();
+        this.venueMode = venue.getVenueMode() != null ? venue.getVenueMode() : "manual";
     }
 
     public String getId() {
@@ -139,6 +141,14 @@ public class VenueResponse {
 
     public void setThumbnailUrl(String thumbnailUrl) {
         this.thumbnailUrl = thumbnailUrl;
+    }
+
+    public String getVenueMode() {
+        return venueMode;
+    }
+
+    public void setVenueMode(String venueMode) {
+        this.venueMode = venueMode;
     }
 }
 

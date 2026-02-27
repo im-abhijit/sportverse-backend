@@ -19,6 +19,7 @@ public class Venue {
     String upiId;
     List<String> amenities;
     String thumbnailUrl;
+    String venueMode; // "manual" or "automatic"
 
     // Constructors
     public Venue() {}
@@ -36,6 +37,14 @@ public class Venue {
         this.upiId = upiId;
         this.amenities = amenities;
         this.thumbnailUrl = thumbnailUrl;
+    }
+
+    public String getVenueMode() {
+        return venueMode;
+    }
+
+    public void setVenueMode(String venueMode) {
+        this.venueMode = venueMode;
     }
 
     // Getters and Setters
@@ -173,6 +182,8 @@ public class Venue {
         venue.setUpiId(doc.getString("upiId"));
         venue.setAmenities(doc.getList("amenities", String.class));
         venue.setThumbnailUrl(doc.getString("thumbnailUrl"));
+        String mode = doc.getString("venueMode");
+        venue.setVenueMode(mode != null && !mode.isEmpty() ? mode : "manual");
         return venue;
     }
 
@@ -193,6 +204,7 @@ public class Venue {
         doc.append("upiId", this.upiId);
         doc.append("amenities", this.amenities);
         doc.append("thumbnailUrl", this.thumbnailUrl);
+        doc.append("venueMode", this.venueMode != null ? this.venueMode : "manual");
         return doc;
     }
 

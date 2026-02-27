@@ -1,6 +1,7 @@
 package co.sportverse.sportverse_backend.repository;
 
 import co.sportverse.sportverse_backend.entity.VenueSlots;
+import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -56,6 +57,25 @@ public class SlotsRepository {
             }
             doc.put("slots", slotDocs);
             slotsCollection.replaceOne(filter, doc);
+        }
+    }
+
+    public void markSlotsBooked(ClientSession session, String venueId, String date, java.util.List<String> slotIds) {
+        if (slotIds == null || slotIds.isEmpty()) return;
+        Bson filter = and(eq("venueId", new org.bson.types.ObjectId(venueId)), eq("date", date));
+        Document doc = slotsCollection.find(session, filter).first();
+        if (doc == null) return;
+        java.util.List<Document> slotDocs = (java.util.List<Document>) doc.get("slots");
+        if (slotDocs != null) {
+            java.util.Set<String> target = new java.util.HashSet<>(slotIds);
+            for (Document s : slotDocs) {
+                String sid = s.getString("slotId");
+                if (sid != null && target.contains(sid)) {
+                    s.put("isBooked", true);
+                }
+            }
+            doc.put("slots", slotDocs);
+            slotsCollection.replaceOne(session, filter, doc);
         }
     }
 

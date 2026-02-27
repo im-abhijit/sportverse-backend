@@ -2,6 +2,7 @@ package co.sportverse.sportverse_backend.repository;
 
 import co.sportverse.sportverse_backend.entity.BookingStatus;
 import co.sportverse.sportverse_backend.entity.PaymentStatus;
+import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -79,6 +80,23 @@ public class BookingRepository {
         return booking.getObjectId("_id").toString();
     }
 
+    public void updateRazorpayOrderId(String bookingId, String razorpayOrderId) {
+        Bson filter = eq("_id", new org.bson.types.ObjectId(bookingId));
+        java.time.Instant now = java.time.Instant.now();
+        bookingsCollection.updateOne(filter, combine(
+                set("payment.razorpayOrderId", razorpayOrderId),
+                set("updatedAt", now)
+        ));
+    }
+
+    public void deleteById(String bookingId) {
+        if (bookingId == null || bookingId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Booking ID is required");
+        }
+        Bson filter = eq("_id", new org.bson.types.ObjectId(bookingId.trim()));
+        bookingsCollection.deleteOne(filter);
+    }
+
     public Document findByRazorpayOrderId(String razorpayOrderId) {
         Bson filter = eq("payment.razorpayOrderId", razorpayOrderId);
         return bookingsCollection.find(filter).first();
@@ -88,6 +106,18 @@ public class BookingRepository {
         Bson filter = eq("payment.razorpayOrderId", razorpayOrderId);
         java.time.Instant now = java.time.Instant.now();
         bookingsCollection.updateOne(filter, combine(
+                set("payment.razorpayPaymentId", paymentId),
+                set("payment.razorpaySignature", signature),
+                set("payment.status", paymentStatus.name()),
+                set("bookingStatus", bookingStatus.name()),
+                set("updatedAt", now)
+        ));
+    }
+
+    public void updatePaymentByOrderId(ClientSession session, String razorpayOrderId, PaymentStatus paymentStatus, String paymentId, String signature, BookingStatus bookingStatus) {
+        Bson filter = eq("payment.razorpayOrderId", razorpayOrderId);
+        java.time.Instant now = java.time.Instant.now();
+        bookingsCollection.updateOne(session, filter, combine(
                 set("payment.razorpayPaymentId", paymentId),
                 set("payment.razorpaySignature", signature),
                 set("payment.status", paymentStatus.name()),

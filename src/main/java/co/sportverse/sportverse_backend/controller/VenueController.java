@@ -93,6 +93,7 @@ public class VenueController {
                     existingVenue.setQrCodeImage(request.getQrCodeImage());
                     existingVenue.setUpiId(request.getUpiId());
                     existingVenue.setAmenities(request.getAmenities());
+                    existingVenue.setVenueMode(request.getVenueMode() != null ? request.getVenueMode() : "manual");
                     existingVenue.setId(request.getId());
                     // Update venue using repository
                     savedVenue = venueRepository.update(existingVenue);
@@ -112,9 +113,9 @@ public class VenueController {
                         request.getQrCodeImage(),
                         request.getUpiId(),
                         request.getAmenities(),
-                            request.getThumbnailUrl()
-
+                        request.getThumbnailUrl()
                     );
+                    venue.setVenueMode(request.getVenueMode() != null ? request.getVenueMode() : "manual");
                     savedVenue = venueRepository.save(venue);
                     logger.info("POST /api/venues - Successfully created venue. venueId: {}", savedVenue.getId());
                 }
@@ -133,8 +134,9 @@ public class VenueController {
                     request.getQrCodeImage(),
                     request.getUpiId(),
                     request.getAmenities(),
-                        request.getThumbnailUrl()
+                    request.getThumbnailUrl()
                 );
+                venue.setVenueMode(request.getVenueMode() != null ? request.getVenueMode() : "manual");
                 savedVenue = venueRepository.save(venue);
                 logger.info("POST /api/venues - Successfully created venue. venueId: {}", savedVenue.getId());
             }

@@ -16,6 +16,7 @@ public class CreateVenueRequest {
     private String upiId;
     private List<String> amenities;
     private String thumbnailUrl;
+    private String venueMode;
 
     public CreateVenueRequest() {}
 
@@ -127,6 +128,14 @@ public class CreateVenueRequest {
 
     public void setThumbnailUrl(String thumbnailUrl) {
         this.thumbnailUrl = thumbnailUrl;
+    }
+
+    public String getVenueMode() {
+        return venueMode;
+    }
+
+    public void setVenueMode(String venueMode) {
+        this.venueMode = venueMode;
     }
 }
 
