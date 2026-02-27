@@ -62,7 +62,7 @@ public class BookingRepository {
             slotIdList.addAll(slotIds);
         }
         Document booking = new Document()
-                .append("userId", new org.bson.types.ObjectId(userId))
+                .append("userId", userId)
                 .append("venueId", new org.bson.types.ObjectId(venueId))
                 .append("slotIds", slotIdList)
                 .append("date", date)
