@@ -17,6 +17,7 @@ import java.util.List;
 
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Filters.in;
+import static com.mongodb.client.model.Filters.or;
 import static com.mongodb.client.model.Sorts.descending;
 import static com.mongodb.client.model.Updates.combine;
 import static com.mongodb.client.model.Updates.set;
@@ -127,7 +128,14 @@ public class BookingRepository {
     }
 
     public java.util.List<Document> findByUserId(String userId) {
-        Bson filter = eq("userId", userId);
+        // Match both: userId as string (manual) and userId as ObjectId (Razorpay)
+        Bson filter;
+        try {
+            org.bson.types.ObjectId oid = new org.bson.types.ObjectId(userId);
+            filter = or(eq("userId", userId), eq("userId", oid));
+        } catch (IllegalArgumentException e) {
+            filter = eq("userId", userId);
+        }
         return bookingsCollection.find(filter)
                 .sort(descending("createdAt"))
                 .into(new java.util.ArrayList<>());

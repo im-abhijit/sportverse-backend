@@ -311,8 +311,21 @@ public class BookingService {
     }
 
     public List<BookingItemResponse> getUserBookingsByMobileNumber(String mobileNumber) {
-        // Find user by mobile number
-        return getUserBookings(mobileNumber);
+        if (mobileNumber == null || mobileNumber.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        String cleaned = mobileNumber.trim().replaceAll("\\s+", "");
+        User user = userService.getUserByMobileNumber(cleaned);
+        if (user == null && cleaned.startsWith("91") && cleaned.length() == 12) {
+            user = userService.getUserByMobileNumber(cleaned.substring(2));
+        }
+        if (user == null && cleaned.length() == 10 && !cleaned.startsWith("91")) {
+            user = userService.getUserByMobileNumber("91" + cleaned);
+        }
+        if (user == null || user.getId() == null || user.getId().isEmpty()) {
+            return new ArrayList<>();
+        }
+        return getUserBookings(user.getId());
     }
     
     public boolean cancelBooking(String bookingId) {

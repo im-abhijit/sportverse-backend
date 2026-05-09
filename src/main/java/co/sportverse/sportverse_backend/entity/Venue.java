@@ -4,6 +4,7 @@ import org.bson.Document;
 
 import java.util.List;
 
+
 public class Venue {
 
     String id;
@@ -20,6 +21,10 @@ public class Venue {
     List<String> amenities;
     String thumbnailUrl;
     String venueMode; // "manual" or "automatic"
+    private String operatingHoursDisplay;
+    private boolean isOpenNow;
+    private Integer minPrice;
+    private Integer maxPrice;
 
     // Constructors
     public Venue() {}
@@ -152,6 +157,38 @@ public class Venue {
         this.thumbnailUrl = thumbnailUrl;
     }
 
+    public String getOperatingHoursDisplay() {
+        return operatingHoursDisplay;
+    }
+
+    public void setOperatingHoursDisplay(String operatingHoursDisplay) {
+        this.operatingHoursDisplay = operatingHoursDisplay;
+    }
+
+    public boolean isOpenNow() {
+        return isOpenNow;
+    }
+
+    public void setOpenNow(boolean openNow) {
+        isOpenNow = openNow;
+    }
+
+    public Integer getMinPrice() {
+        return minPrice;
+    }
+
+    public void setMinPrice(Integer minPrice) {
+        this.minPrice = minPrice;
+    }
+
+    public Integer getMaxPrice() {
+        return maxPrice;
+    }
+
+    public void setMaxPrice(Integer maxPrice) {
+        this.maxPrice = maxPrice;
+    }
+
     @Override
     public String toString() {
         return "Venue{" +
@@ -184,6 +221,10 @@ public class Venue {
         venue.setThumbnailUrl(doc.getString("thumbnailUrl"));
         String mode = doc.getString("venueMode");
         venue.setVenueMode(mode != null && !mode.isEmpty() ? mode : "manual");
+        venue.setOperatingHoursDisplay(doc.getString("operatingHoursDisplay"));
+        venue.setMinPrice(doc.getInteger("minPrice"));
+        venue.setMaxPrice(doc.getInteger("maxPrice"));
+        venue.setOpenNow(doc.getBoolean("openNow"));
         return venue;
     }
 
@@ -205,6 +246,10 @@ public class Venue {
         doc.append("amenities", this.amenities);
         doc.append("thumbnailUrl", this.thumbnailUrl);
         doc.append("venueMode", this.venueMode != null ? this.venueMode : "manual");
+        doc.append("minPrice", this.minPrice);
+        doc.append("maxPrice", this.maxPrice);
+        doc.append("operatingHoursDisplay", this.operatingHoursDisplay);
+        doc.append("openNow", this.isOpenNow);
         return doc;
     }
 

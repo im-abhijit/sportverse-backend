@@ -19,6 +19,10 @@ public class VenueResponse {
     private List<String> amenities;
     private String thumbnailUrl;
     private String venueMode;
+    private String operatingHoursDisplay;
+    private boolean isOpenNow;
+    private Integer minPrice;
+    private Integer maxPrice;
 
     public VenueResponse() {}
 
@@ -37,6 +41,10 @@ public class VenueResponse {
         this.amenities = venue.getAmenities();
         this.thumbnailUrl = venue.getThumbnailUrl();
         this.venueMode = venue.getVenueMode() != null ? venue.getVenueMode() : "manual";
+        this.operatingHoursDisplay = venue.getOperatingHoursDisplay();
+        this.isOpenNow = venue.isOpenNow();
+        this.minPrice = venue.getMinPrice();
+        this.maxPrice = venue.getMaxPrice();
     }
 
     public String getId() {
@@ -149,6 +157,38 @@ public class VenueResponse {
 
     public void setVenueMode(String venueMode) {
         this.venueMode = venueMode;
+    }
+
+    public String getOperatingHoursDisplay() {
+        return operatingHoursDisplay;
+    }
+
+    public void setOperatingHoursDisplay(String operatingHoursDisplay) {
+        this.operatingHoursDisplay = operatingHoursDisplay;
+    }
+
+    public boolean isOpenNow() {
+        return isOpenNow;
+    }
+
+    public void setOpenNow(boolean openNow) {
+        isOpenNow = openNow;
+    }
+
+    public Integer getMinPrice() {
+        return minPrice;
+    }
+
+    public void setMinPrice(Integer minPrice) {
+        this.minPrice = minPrice;
+    }
+
+    public Integer getMaxPrice() {
+        return maxPrice;
+    }
+
+    public void setMaxPrice(Integer maxPrice) {
+        this.maxPrice = maxPrice;
     }
 }
 

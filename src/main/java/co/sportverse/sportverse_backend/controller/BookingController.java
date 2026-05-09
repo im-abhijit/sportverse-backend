@@ -27,13 +27,14 @@ public class BookingController {
 
     @GetMapping("/user/{userId}")
     public ResponseEntity<ApiResponse> getBookingsByUser(@PathVariable String userId) {
-        logger.info("GET /api/bookings/user/{} - Fetching bookings for user", userId);
+        logger.info("GET /api/bookings/user/{} - Fetching bookings (userId/phone)", userId);
         try {
             if (userId == null || userId.trim().isEmpty()) {
-                logger.warn("GET /api/bookings/user/{} - Validation failed: userId is required", userId);
-                return ResponseEntity.badRequest().body(new ApiResponse(false, "userId is required"));
+                logger.warn("GET /api/bookings/user/{} - Validation failed: userId/phone is required", userId);
+                return ResponseEntity.badRequest().body(new ApiResponse(false, "userId/phone is required"));
             }
-            List<BookingItemResponse> bookings = bookingService.getUserBookings(userId.trim());
+            // userId param is used for phone number (without +91) - look up user by phone and get bookings
+            List<BookingItemResponse> bookings = bookingService.getUserBookingsByMobileNumber(userId.trim());
             logger.info("GET /api/bookings/user/{} - Successfully retrieved {} bookings", userId, bookings.size());
             return ResponseEntity.ok(new ApiResponse(true, "Bookings retrieved successfully", bookings));
         } catch (Exception e) {

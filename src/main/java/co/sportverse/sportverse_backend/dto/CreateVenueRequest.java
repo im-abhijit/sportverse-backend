@@ -17,7 +17,10 @@ public class CreateVenueRequest {
     private List<String> amenities;
     private String thumbnailUrl;
     private String venueMode;
-
+    private String operatingHoursDisplay;
+    private boolean isOpenNow;
+    private Integer minPrice;
+    private Integer maxPrice;
     public CreateVenueRequest() {}
 
     public CreateVenueRequest(String name, String description, List<String> games, String location, List<String> photos) {
@@ -136,6 +139,38 @@ public class CreateVenueRequest {
 
     public void setVenueMode(String venueMode) {
         this.venueMode = venueMode;
+    }
+
+    public String getOperatingHoursDisplay() {
+        return operatingHoursDisplay;
+    }
+
+    public void setOperatingHoursDisplay(String operatingHoursDisplay) {
+        this.operatingHoursDisplay = operatingHoursDisplay;
+    }
+
+    public boolean isOpenNow() {
+        return isOpenNow;
+    }
+
+    public void setOpenNow(boolean openNow) {
+        isOpenNow = openNow;
+    }
+
+    public Integer getMinPrice() {
+        return minPrice;
+    }
+
+    public void setMinPrice(Integer minPrice) {
+        this.minPrice = minPrice;
+    }
+
+    public Integer getMaxPrice() {
+        return maxPrice;
+    }
+
+    public void setMaxPrice(Integer maxPrice) {
+        this.maxPrice = maxPrice;
     }
 }
 
