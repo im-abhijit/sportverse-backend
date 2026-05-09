@@ -22,7 +22,7 @@ public class Venue {
     String thumbnailUrl;
     String venueMode; // "manual" or "automatic"
     private String operatingHoursDisplay;
-    private boolean isOpenNow;
+    private Boolean isOpenNow;
     private Integer minPrice;
     private Integer maxPrice;
 
@@ -224,7 +224,7 @@ public class Venue {
         venue.setOperatingHoursDisplay(doc.getString("operatingHoursDisplay"));
         venue.setMinPrice(doc.getInteger("minPrice"));
         venue.setMaxPrice(doc.getInteger("maxPrice"));
-        venue.setOpenNow(doc.getBoolean("openNow"));
+        venue.setOpenNow(Boolean.TRUE.equals(doc.getBoolean("isOpenNow")));
         return venue;
     }
 
