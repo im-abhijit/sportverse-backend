@@ -95,6 +95,10 @@ public class VenueController {
                     existingVenue.setAmenities(request.getAmenities());
                     existingVenue.setVenueMode(request.getVenueMode() != null ? request.getVenueMode() : "manual");
                     existingVenue.setId(request.getId());
+                    existingVenue.setOperatingHoursDisplay(request.getOperatingHoursDisplay());
+                    existingVenue.setMinPrice(request.getMinPrice());
+                    existingVenue.setMaxPrice(request.getMaxPrice());
+                    existingVenue.setOpenNow(request.isOpenNow());
                     // Update venue using repository
                     savedVenue = venueRepository.update(existingVenue);
                     logger.info("POST /api/venues - Successfully updated venue. venueId: {}", savedVenue.getId());
@@ -116,6 +120,10 @@ public class VenueController {
                         request.getThumbnailUrl()
                     );
                     venue.setVenueMode(request.getVenueMode() != null ? request.getVenueMode() : "manual");
+                    venue.setOperatingHoursDisplay(request.getOperatingHoursDisplay());
+                    venue.setMinPrice(request.getMinPrice());
+                    venue.setMaxPrice(request.getMaxPrice());
+                    venue.setOpenNow(request.isOpenNow());
                     savedVenue = venueRepository.save(venue);
                     logger.info("POST /api/venues - Successfully created venue. venueId: {}", savedVenue.getId());
                 }
@@ -137,6 +145,10 @@ public class VenueController {
                     request.getThumbnailUrl()
                 );
                 venue.setVenueMode(request.getVenueMode() != null ? request.getVenueMode() : "manual");
+                venue.setOperatingHoursDisplay(request.getOperatingHoursDisplay());
+                venue.setMinPrice(request.getMinPrice());
+                venue.setMaxPrice(request.getMaxPrice());
+                venue.setOpenNow(request.isOpenNow());
                 savedVenue = venueRepository.save(venue);
                 logger.info("POST /api/venues - Successfully created venue. venueId: {}", savedVenue.getId());
             }
