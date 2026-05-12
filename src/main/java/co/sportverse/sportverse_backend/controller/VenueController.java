@@ -34,6 +34,17 @@ public class VenueController {
         return ResponseEntity.ok(new ApiResponse(true, message, response));
     }
 
+    @GetMapping("/city/{city}")
+    public ResponseEntity<ApiResponse> getVenuesByCity(@PathVariable String city) {
+        logger.info("GET /api/venues/city/{} - Fetching venues by city", city);
+        java.util.List<Venue> venues = venueService.getVenuesByCity(city);
+        java.util.List<VenueResponse> responses = venues.stream()
+                .map(VenueResponse::new)
+                .toList();
+        logger.info("GET /api/venues/city/{} - Successfully retrieved {} venues", city, responses.size());
+        return ResponseEntity.ok(new ApiResponse(true, "Venues retrieved successfully", responses));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse> getVenueById(@PathVariable String id) {
         logger.info("GET /api/venues/{} - Fetching venue by ID", id);

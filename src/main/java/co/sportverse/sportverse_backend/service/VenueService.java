@@ -158,6 +158,13 @@ public class VenueService {
         return venueRepository.findByQuery(query);
     }
 
+    public List<Venue> getVenuesByCity(String city) {
+        if (city == null || city.trim().isEmpty()) {
+            throw new IllegalArgumentException("City is required");
+        }
+        return getVenues(city, null, null, null);
+    }
+
     public Venue getVenueById(String id) {
         return venueRepository.findById(id);
     }
