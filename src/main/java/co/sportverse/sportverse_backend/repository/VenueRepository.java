@@ -7,7 +7,10 @@ import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
 
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
@@ -56,17 +59,11 @@ public class VenueRepository {
                 .into(new java.util.ArrayList<>());
     }
 
-    public java.util.List<Venue> findAll() {
-        return venuesCollection.find()
-                .map(Venue::fromDocument)
-                .into(new java.util.ArrayList<>());
-    }
-
-    public java.util.List<Venue> findByCity(String city) {
-        Bson filter = eq("city", city);
+    public java.util.List<Venue> findByQuery(Query query) {
+        Document filter = query.getQueryObject();
         return venuesCollection.find(filter)
                 .map(Venue::fromDocument)
-                .into(new java.util.ArrayList<>());
+                .into(new ArrayList<>());
     }
 
     public Venue update(Venue venue) {

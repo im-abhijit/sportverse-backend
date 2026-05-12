@@ -1,6 +1,8 @@
 package co.sportverse.sportverse_backend.service;
 
 import co.sportverse.sportverse_backend.config.RazorpayConfig;
+import co.sportverse.sportverse_backend.dto.CreatePaymentOrderRequest;
+import co.sportverse.sportverse_backend.dto.VerifyPaymentRequest;
 import co.sportverse.sportverse_backend.repository.BookingRepository;
 import co.sportverse.sportverse_backend.entity.BookingStatus;
 import co.sportverse.sportverse_backend.entity.PaymentStatus;
@@ -45,6 +47,44 @@ public class PaymentService {
 
     private RazorpayClient client() throws RazorpayException {
         return new RazorpayClient(razorpayConfig.getKey_id(), razorpayConfig.getKey_secret());
+    }
+
+    public Map<String, Object> createOrderFromRequest(CreatePaymentOrderRequest request) {
+        if (request.getAmount() <= 0) {
+            throw new IllegalArgumentException("Amount must be > 0");
+        }
+        if (request.getUserId() == null || request.getUserId().trim().isEmpty()) {
+            throw new IllegalArgumentException("userId is required");
+        }
+        if (request.getVenueId() == null || request.getVenueId().trim().isEmpty()) {
+            throw new IllegalArgumentException("venueId is required");
+        }
+        if (request.getSlotIds() == null || request.getSlotIds().isEmpty()) {
+            throw new IllegalArgumentException("slotIds are required");
+        }
+        if (request.getDate() == null || request.getDate().trim().isEmpty()) {
+            throw new IllegalArgumentException("date is required (yyyy-MM-dd)");
+        }
+        return createOrder(
+                request.getAmount(),
+                request.getUserId().trim(),
+                request.getVenueId().trim(),
+                request.getSlotIds(),
+                request.getDate().trim()
+        );
+    }
+
+    public boolean verifyPaymentFromRequest(VerifyPaymentRequest request) {
+        if (request.getRazorpay_order_id() == null || request.getRazorpay_order_id().trim().isEmpty()
+                || request.getRazorpay_payment_id() == null || request.getRazorpay_payment_id().trim().isEmpty()
+                || request.getRazorpay_signature() == null || request.getRazorpay_signature().trim().isEmpty()) {
+            throw new IllegalArgumentException("Missing required fields");
+        }
+        return verifyAndUpdate(
+                request.getRazorpay_order_id().trim(),
+                request.getRazorpay_payment_id().trim(),
+                request.getRazorpay_signature().trim()
+        );
     }
 
     public Map<String, Object> createOrder(int amountInRupees, String userId, String venueId, java.util.List<String> slotIds, String date) {

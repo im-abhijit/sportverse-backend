@@ -25,162 +25,65 @@ public class BookingController {
     @Autowired
     private BookingService bookingService;
 
+    @GetMapping
+    public ResponseEntity<ApiResponse> getBookings(
+            @RequestParam(required = false) String mobile,
+            @RequestParam(required = false) String partnerId,
+            @RequestParam(required = false) String bookingId) {
+        logger.info("GET /api/bookings - mobile: {}, partnerId: {}, bookingId: {}", mobile, partnerId, bookingId);
+        List<BookingItemResponse> bookings = bookingService.getBookings(mobile, partnerId, bookingId);
+        logger.info("GET /api/bookings - Successfully retrieved {} bookings", bookings.size());
+        return ResponseEntity.ok(new ApiResponse(true, "Bookings retrieved successfully", bookings));
+    }
+
     @GetMapping("/user/{userId}")
     public ResponseEntity<ApiResponse> getBookingsByUser(@PathVariable String userId) {
         logger.info("GET /api/bookings/user/{} - Fetching bookings (userId/phone)", userId);
-        try {
-            if (userId == null || userId.trim().isEmpty()) {
-                logger.warn("GET /api/bookings/user/{} - Validation failed: userId/phone is required", userId);
-                return ResponseEntity.badRequest().body(new ApiResponse(false, "userId/phone is required"));
-            }
-            // userId param is used for phone number (without +91) - look up user by phone and get bookings
-            List<BookingItemResponse> bookings = bookingService.getUserBookingsByMobileNumber(userId.trim());
-            logger.info("GET /api/bookings/user/{} - Successfully retrieved {} bookings", userId, bookings.size());
-            return ResponseEntity.ok(new ApiResponse(true, "Bookings retrieved successfully", bookings));
-        } catch (Exception e) {
-            logger.error("GET /api/bookings/user/{} - Error fetching bookings", userId, e);
-            return ResponseEntity.internalServerError().body(new ApiResponse(false, "Error fetching bookings: " + e.getMessage()));
-        }
+        List<BookingItemResponse> bookings = bookingService.listBookingsForUserPath(userId);
+        logger.info("GET /api/bookings/user/{} - Successfully retrieved {} bookings", userId, bookings.size());
+        return ResponseEntity.ok(new ApiResponse(true, "Bookings retrieved successfully", bookings));
     }
 
     @GetMapping("/partner/{partnerId}")
     public ResponseEntity<ApiResponse> getBookingsByPartner(@PathVariable String partnerId) {
         logger.info("GET /api/bookings/partner/{} - Fetching bookings for partner", partnerId);
-        try {
-            if (partnerId == null || partnerId.trim().isEmpty()) {
-                logger.warn("GET /api/bookings/partner/{} - Validation failed: partnerId is required", partnerId);
-                return ResponseEntity.badRequest().body(new ApiResponse(false, "partnerId is required"));
-            }
-            List<BookingItemResponse> bookings = bookingService.getPartnerBookings(partnerId.trim());
-            logger.info("GET /api/bookings/partner/{} - Successfully retrieved {} bookings", partnerId, bookings.size());
-            return ResponseEntity.ok(new ApiResponse(true, "Partner bookings retrieved successfully", bookings));
-        } catch (Exception e) {
-            logger.error("GET /api/bookings/partner/{} - Error fetching partner bookings", partnerId, e);
-            return ResponseEntity.internalServerError().body(new ApiResponse(false, "Error fetching partner bookings: " + e.getMessage()));
-        }
+        List<BookingItemResponse> bookings = bookingService.listPartnerBookingsForPath(partnerId);
+        logger.info("GET /api/bookings/partner/{} - Successfully retrieved {} bookings", partnerId, bookings.size());
+        return ResponseEntity.ok(new ApiResponse(true, "Partner bookings retrieved successfully", bookings));
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse> createBooking(@RequestBody CreateBookingRequest request) {
-        logger.info("POST /api/bookings - Creating booking. partnerId: {}, venueId: {}, userId: {}, date: {}, slots count: {}", 
+        logger.info("POST /api/bookings - Creating booking. partnerId: {}, venueId: {}, userId: {}, date: {}, slots count: {}",
                 request.getPartnerId(), request.getVenueId(), request.getUserId(), request.getDate(),
                 request.getSlots() != null ? request.getSlots().size() : 0);
-        try {
-            // Validate required fields
-            if (request.getPartnerId() == null || request.getPartnerId().trim().isEmpty()) {
-                logger.warn("POST /api/bookings - Validation failed: partnerId is required");
-                return ResponseEntity.badRequest().body(new ApiResponse(false, "partnerId is required"));
-            }
-            if (request.getVenueId() == null || request.getVenueId().trim().isEmpty()) {
-                logger.warn("POST /api/bookings - Validation failed: venueId is required");
-                return ResponseEntity.badRequest().body(new ApiResponse(false, "venueId is required"));
-            }
-            if (request.getUserId() == null || request.getUserId().trim().isEmpty()) {
-                logger.warn("POST /api/bookings - Validation failed: userId is required");
-                return ResponseEntity.badRequest().body(new ApiResponse(false, "userId is required"));
-            }
-            if (request.getDate() == null || request.getDate().trim().isEmpty()) {
-                logger.warn("POST /api/bookings - Validation failed: date is required");
-                return ResponseEntity.badRequest().body(new ApiResponse(false, "date is required (yyyy-MM-dd)"));
-            }
-            if (request.getSlots() == null || request.getSlots().isEmpty()) {
-                logger.warn("POST /api/bookings - Validation failed: slots are required");
-                return ResponseEntity.badRequest().body(new ApiResponse(false, "slots are required"));
-            }
-
-            // Create booking with provided status and paymentStatus
-            String bookingId = bookingService.createBooking(
-                    request.getPartnerId().trim(),
-                    request.getUserId().trim(),
-                    request.getVenueId().trim(),
-                    request.getSlots(),
-                    request.getDate().trim(),
-                    request.getStatus(),
-                    request.getPaymentStatus(),
-                    request.getPaymentScreenshotUrl()
-            );
-
-            logger.info("POST /api/bookings - Successfully created booking. bookingId: {}, status: {}, paymentStatus: {}", 
-                    bookingId, request.getStatus(), request.getPaymentStatus());
-            return ResponseEntity.ok(new ApiResponse(true, "Booking created successfully", bookingId));
-        } catch (Exception e) {
-            logger.error("POST /api/bookings - Error creating booking. partnerId: {}, venueId: {}, userId: {}", 
-                    request.getPartnerId(), request.getVenueId(), request.getUserId(), e);
-            return ResponseEntity.internalServerError().body(new ApiResponse(false, "Error creating booking: " + e.getMessage()));
-        }
+        String bookingId = bookingService.createBookingFromRequest(request);
+        logger.info("POST /api/bookings - Successfully created booking. bookingId: {}, status: {}, paymentStatus: {}",
+                bookingId, request.getStatus(), request.getPaymentStatus());
+        return ResponseEntity.ok(new ApiResponse(true, "Booking created successfully", bookingId));
     }
 
     @GetMapping("/user/mobile/{mobileNumber}")
     public ResponseEntity<ApiResponse> getBookingsByMobileNumber(@PathVariable String mobileNumber) {
         logger.info("GET /api/bookings/user/mobile/{} - Fetching bookings by mobile number", mobileNumber);
-        try {
-            if (mobileNumber == null || mobileNumber.trim().isEmpty()) {
-                logger.warn("GET /api/bookings/user/mobile/{} - Validation failed: Mobile number is required", mobileNumber);
-                return ResponseEntity.badRequest().body(new ApiResponse(false, "Mobile number is required"));
-            }
-
-            // Use mobile number as-is (no formatting)
-            String phoneNumber = mobileNumber.trim();
-            List<BookingItemResponse> bookings = bookingService.getUserBookingsByMobileNumber(phoneNumber);
-            logger.info("GET /api/bookings/user/mobile/{} - Successfully retrieved {} bookings", mobileNumber, bookings.size());
-            return ResponseEntity.ok(new ApiResponse(true, "Bookings retrieved successfully", bookings));
-        } catch (Exception e) {
-            logger.error("GET /api/bookings/user/mobile/{} - Error fetching bookings", mobileNumber, e);
-            return ResponseEntity.internalServerError().body(new ApiResponse(false, "Error fetching bookings: " + e.getMessage()));
-        }
+        List<BookingItemResponse> bookings = bookingService.listBookingsForMobilePath(mobileNumber);
+        logger.info("GET /api/bookings/user/mobile/{} - Successfully retrieved {} bookings", mobileNumber, bookings.size());
+        return ResponseEntity.ok(new ApiResponse(true, "Bookings retrieved successfully", bookings));
     }
 
     @PostMapping("/{bookingId}/confirm")
     public ResponseEntity<ApiResponse> confirmBooking(@PathVariable String bookingId) {
         logger.info("POST /api/bookings/{}/confirm - Confirming booking", bookingId);
-        try {
-            if (bookingId == null || bookingId.trim().isEmpty()) {
-                logger.warn("POST /api/bookings/{}/confirm - Validation failed: bookingId is required", bookingId);
-                return ResponseEntity.badRequest().body(new ApiResponse(false, "bookingId is required"));
-            }
-
-            boolean confirmed = bookingService.confirmBooking(bookingId.trim());
-            if (!confirmed) {
-                logger.warn("POST /api/bookings/{}/confirm - Booking not found", bookingId);
-                return ResponseEntity.badRequest().body(new ApiResponse(false, "Booking not found"));
-            }
-
-            logger.info("POST /api/bookings/{}/confirm - Successfully confirmed booking", bookingId);
-            return ResponseEntity.ok(new ApiResponse(true, "Booking confirmed successfully"));
-        } catch (IllegalArgumentException e) {
-            logger.warn("POST /api/bookings/{}/confirm - Invalid request: {}", bookingId, e.getMessage());
-            return ResponseEntity.badRequest().body(new ApiResponse(false, e.getMessage()));
-        } catch (Exception e) {
-            logger.error("POST /api/bookings/{}/confirm - Error confirming booking", bookingId, e);
-            return ResponseEntity.internalServerError().body(new ApiResponse(false, "Error confirming booking: " + e.getMessage()));
-        }
+        bookingService.confirmBooking(bookingId);
+        logger.info("POST /api/bookings/{}/confirm - Successfully confirmed booking", bookingId);
+        return ResponseEntity.ok(new ApiResponse(true, "Booking confirmed successfully"));
     }
 
     @DeleteMapping("/{bookingId}")
     public ResponseEntity<ApiResponse> cancelBooking(@PathVariable String bookingId) {
         logger.info("DELETE /api/bookings/{} - Cancelling booking", bookingId);
-        try {
-            if (bookingId == null || bookingId.trim().isEmpty()) {
-                logger.warn("DELETE /api/bookings/{} - Validation failed: bookingId is required", bookingId);
-                return ResponseEntity.badRequest().body(new ApiResponse(false, "bookingId is required"));
-            }
-
-            boolean cancelled = bookingService.cancelBooking(bookingId.trim());
-            if (!cancelled) {
-                logger.warn("DELETE /api/bookings/{} - Booking not found", bookingId);
-                return ResponseEntity.badRequest().body(new ApiResponse(false, "Booking not found"));
-            }
-
-            logger.info("DELETE /api/bookings/{} - Successfully cancelled booking", bookingId);
-            return ResponseEntity.ok(new ApiResponse(true, "Booking cancelled successfully"));
-        } catch (IllegalArgumentException e) {
-            logger.warn("DELETE /api/bookings/{} - Invalid request: {}", bookingId, e.getMessage());
-            return ResponseEntity.badRequest().body(new ApiResponse(false, e.getMessage()));
-        } catch (Exception e) {
-            logger.error("DELETE /api/bookings/{} - Error cancelling booking", bookingId, e);
-            return ResponseEntity.internalServerError().body(new ApiResponse(false, "Error cancelling booking: " + e.getMessage()));
-        }
+        bookingService.cancelBooking(bookingId);
+        logger.info("DELETE /api/bookings/{} - Successfully cancelled booking", bookingId);
+        return ResponseEntity.ok(new ApiResponse(true, "Booking cancelled successfully"));
     }
 }
-
-

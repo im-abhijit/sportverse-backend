@@ -9,6 +9,7 @@ import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -16,8 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.eq;
-import static com.mongodb.client.model.Filters.in;
-import static com.mongodb.client.model.Filters.or;
 import static com.mongodb.client.model.Sorts.descending;
 import static com.mongodb.client.model.Updates.combine;
 import static com.mongodb.client.model.Updates.set;
@@ -127,32 +126,11 @@ public class BookingRepository {
         ));
     }
 
-    public java.util.List<Document> findByUserId(String userId) {
-        // Match both: userId as string (manual) and userId as ObjectId (Razorpay)
-        Bson filter;
-        try {
-            org.bson.types.ObjectId oid = new org.bson.types.ObjectId(userId);
-            filter = or(eq("userId", userId), eq("userId", oid));
-        } catch (IllegalArgumentException e) {
-            filter = eq("userId", userId);
-        }
+    public java.util.List<Document> findByQuery(Query query) {
+        Document filter = query.getQueryObject();
         return bookingsCollection.find(filter)
                 .sort(descending("createdAt"))
                 .into(new java.util.ArrayList<>());
-    }
-
-    public java.util.List<Document> findByVenueIds(List<String> venueIds) {
-        if (venueIds == null || venueIds.isEmpty()) {
-            return new ArrayList<>();
-        }
-        List<org.bson.types.ObjectId> venueObjectIds = new ArrayList<>();
-        for (String vid : venueIds) {
-            venueObjectIds.add(new org.bson.types.ObjectId(vid));
-        }
-        Bson filter = in("venueId", venueObjectIds);
-        return bookingsCollection.find(filter)
-                .sort(descending("createdAt"))
-                .into(new ArrayList<>());
     }
 
     public String createBookingDirect(String partnerId, String userId, String venueId, List<co.sportverse.sportverse_backend.dto.CreateBookingRequest.SlotDto> slotDtos, String date, int amount, String status, String paymentStatus, String paymentScreenshotUrl) {

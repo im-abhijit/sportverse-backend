@@ -7,6 +7,9 @@ import co.sportverse.sportverse_backend.repository.SlotsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
 @Service
 public class SlotsService {
 
@@ -199,6 +202,25 @@ public class SlotsService {
             throw new IllegalArgumentException("slotId is required");
         }
         return slotsRepository.deleteSlot(venueId.trim(), date.trim(), slotId.trim());
+    }
+
+    /**
+     * Creates slots for {@code request} on the date {@code LocalDate.now() + daysAhead} (ISO format).
+     */
+    public VenueSlots createSlotsForDatePlusDays(CreateSlotsRequest request, long daysAhead) {
+        if (request.getVenueId() == null || request.getVenueId().trim().isEmpty()) {
+            throw new IllegalArgumentException("venueId is required");
+        }
+        if (request.getSlots() == null || request.getSlots().isEmpty()) {
+            throw new IllegalArgumentException("slots are required");
+        }
+        String dateString = LocalDate.now().plusDays(daysAhead).format(DateTimeFormatter.ISO_LOCAL_DATE);
+        request.setDate(dateString);
+        return createSlots(request);
+    }
+
+    public VenueSlots createSlotsForNextDays(CreateSlotsRequest request) {
+        return createSlotsForDatePlusDays(request, 15);
     }
 }
 
