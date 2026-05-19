@@ -11,10 +11,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/imagekit")
-@CrossOrigin(origins = {
-        "https://sportverse.co.in",
-        "http://localhost:8083"
-})
 public class ImageKitController {
 
     private static final Logger logger = LoggerFactory.getLogger(ImageKitController.class);

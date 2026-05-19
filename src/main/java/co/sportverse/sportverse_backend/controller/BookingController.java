@@ -1,23 +1,25 @@
 package co.sportverse.sportverse_backend.controller;
 
 import co.sportverse.sportverse_backend.dto.ApiResponse;
+import co.sportverse.sportverse_backend.dto.AuthenticatedUser;
 import co.sportverse.sportverse_backend.dto.BookingItemResponse;
+import co.sportverse.sportverse_backend.dto.CancelBookingRequest;
+import co.sportverse.sportverse_backend.dto.CreateBookingOrderRequest;
+import co.sportverse.sportverse_backend.dto.CreateBookingOrderResponse;
 import co.sportverse.sportverse_backend.dto.CreateBookingRequest;
 import co.sportverse.sportverse_backend.service.BookingService;
+import co.sportverse.sportverse_backend.security.AuthenticatedUserSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/bookings")
-@CrossOrigin(origins = {
-        "https://sportverse.co.in",
-        "http://localhost:8083"
-})
 public class BookingController {
 
     private static final Logger logger = LoggerFactory.getLogger(BookingController.class);
@@ -63,6 +65,23 @@ public class BookingController {
         return ResponseEntity.ok(new ApiResponse(true, "Booking created successfully", bookingId));
     }
 
+    @PostMapping("/create-order")
+    public ResponseEntity<ApiResponse> reserveSlotsCreateBookingAndOrder(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @RequestBody CreateBookingOrderRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Request body is required");
+        }
+        String userSubject = AuthenticatedUserSupport.requireUserSubject(authenticatedUser);
+        logger.info("POST /api/bookings/create-order - Reserving slots and creating order. partnerId: {}, venueId: {}, principal: {}, date: {}, slots count: {}",
+                request.getPartnerId(), request.getVenueId(), userSubject, request.getDate(),
+                request.getSlotIds() != null ? request.getSlotIds().size() : 0);
+        CreateBookingOrderResponse response = bookingService.reserveSlotsCreateBookingAndOrder(request, userSubject);
+        logger.info("POST /api/bookings/create-order - Successfully created order. bookingId: {}, orderId: {}",
+                response.getBookingId(), response.getOrderId());
+        return ResponseEntity.ok(new ApiResponse(true, "Booking reserved and order created successfully", response));
+    }
+
     @GetMapping("/user/mobile/{mobileNumber}")
     public ResponseEntity<ApiResponse> getBookingsByMobileNumber(@PathVariable String mobileNumber) {
         logger.info("GET /api/bookings/user/mobile/{} - Fetching bookings by mobile number", mobileNumber);
@@ -77,6 +96,21 @@ public class BookingController {
         bookingService.confirmBooking(bookingId);
         logger.info("POST /api/bookings/{}/confirm - Successfully confirmed booking", bookingId);
         return ResponseEntity.ok(new ApiResponse(true, "Booking confirmed successfully"));
+    }
+
+    @PostMapping("/cancel")
+    public ResponseEntity<ApiResponse> cancelConfirmedBooking(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @RequestBody CancelBookingRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Request body is required");
+        }
+        String userSubject = AuthenticatedUserSupport.requireUserSubject(authenticatedUser);
+        logger.info("POST /api/bookings/cancel - bookingId: {}, principal: {}",
+                request.getBookingId(), userSubject);
+        BookingItemResponse booking = bookingService.cancelConfirmedBookingWithRefund(request, userSubject);
+        logger.info("POST /api/bookings/cancel - done bookingId: {}", booking.getId());
+        return ResponseEntity.ok(new ApiResponse(true, "Booking cancelled and refund initiated", booking));
     }
 
     @DeleteMapping("/{bookingId}")

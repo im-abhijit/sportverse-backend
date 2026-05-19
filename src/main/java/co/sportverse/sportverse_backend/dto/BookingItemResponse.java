@@ -12,6 +12,8 @@ public class BookingItemResponse {
     private String paymentStatus;
     private String paymentScreenshotUrl;
     private String userId;
+    private java.util.List<String> slotIds;
+    private RefundDtoResponse refundDto;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -39,6 +41,22 @@ public class BookingItemResponse {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public java.util.List<String> getSlotIds() {
+        return slotIds;
+    }
+
+    public void setSlotIds(java.util.List<String> slotIds) {
+        this.slotIds = slotIds;
+    }
+
+    public RefundDtoResponse getRefundDto() {
+        return refundDto;
+    }
+
+    public void setRefundDto(RefundDtoResponse refundDto) {
+        this.refundDto = refundDto;
     }
 }
 

@@ -7,6 +7,8 @@ public class VerifyOtpResponse {
     private boolean valid;
     private String userId;
     private String userName;
+    private String jwtToken;
+    private boolean isNewUser;
 
     public VerifyOtpResponse() {}
 
@@ -29,6 +31,14 @@ public class VerifyOtpResponse {
         this.valid = valid;
         this.userId = userId;
         this.userName = userName;
+    }
+
+    public VerifyOtpResponse(boolean success, boolean isNewUser,String message, String jwtToken,String userId) {
+        this.success = success;
+        this.message = message;
+        this.jwtToken = jwtToken;
+        this.isNewUser = isNewUser;
+        this.userId = userId;
     }
 
     public boolean isSuccess() {
@@ -77,5 +87,21 @@ public class VerifyOtpResponse {
 
     public void setUserName(String userName) {
         this.userName = userName;
+    }
+
+    public String getJwtToken() {
+        return jwtToken;
+    }
+
+    public void setJwtToken(String jwtToken) {
+        this.jwtToken = jwtToken;
+    }
+
+    public boolean isNewUser() {
+        return isNewUser;
+    }
+
+    public void setNewUser(boolean newUser) {
+        isNewUser = newUser;
     }
 }

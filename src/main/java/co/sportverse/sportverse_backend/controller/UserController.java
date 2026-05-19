@@ -12,10 +12,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = {
-        "https://sportverse.co.in",
-        "http://localhost:8083"
-})
 public class UserController {
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);

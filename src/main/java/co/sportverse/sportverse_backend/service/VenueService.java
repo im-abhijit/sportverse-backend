@@ -158,6 +158,27 @@ public class VenueService {
         return venueRepository.findByQuery(query);
     }
 
+    /**
+     * User-facing discovery: optional {@code city} and/or {@code sport} (venue {@code games} contains the sport).
+     * At least one filter must be provided.
+     */
+    public List<Venue> searchVenuesByCityAndSport(String city, String sport) {
+        boolean hasCity = city != null && !city.trim().isEmpty();
+        boolean hasSport = sport != null && !sport.trim().isEmpty();
+        if (!hasCity && !hasSport) {
+            throw new IllegalArgumentException("Provide at least one of: city, sport");
+        }
+
+        Query query = new Query();
+        if (hasCity) {
+            query.addCriteria(Criteria.where("city").is(city.trim()));
+        }
+        if (hasSport) {
+            query.addCriteria(Criteria.where("games").in(sport.trim()));
+        }
+        return venueRepository.findByQuery(query);
+    }
+
     public List<Venue> getVenuesByCity(String city) {
         if (city == null || city.trim().isEmpty()) {
             throw new IllegalArgumentException("City is required");

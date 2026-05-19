@@ -1,9 +1,13 @@
 package co.sportverse.sportverse_backend.advice;
 
 import co.sportverse.sportverse_backend.controller.AuthController;
+import co.sportverse.sportverse_backend.dto.ApiResponse;
 import co.sportverse.sportverse_backend.dto.GenerateOtpResponse;
 import co.sportverse.sportverse_backend.dto.PartnerLoginResponse;
 import co.sportverse.sportverse_backend.dto.VerifyOtpResponse;
+import co.sportverse.sportverse_backend.exceptions.InvalidOtpException;
+import co.sportverse.sportverse_backend.exceptions.OtpSendFailException;
+import co.sportverse.sportverse_backend.exceptions.OtpVerifyFailException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,4 +75,6 @@ public class AuthControllerAdvice {
         }
         return raw;
     }
+
+
 }

@@ -1,6 +1,7 @@
 package co.sportverse.sportverse_backend.advice;
 
 import co.sportverse.sportverse_backend.controller.PartnerController;
+import co.sportverse.sportverse_backend.controller.partner.PartnerBookingController;
 import co.sportverse.sportverse_backend.dto.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice(assignableTypes = PartnerController.class)
+@RestControllerAdvice(assignableTypes = { PartnerController.class, PartnerBookingController.class })
 public class PartnerControllerAdvice {
 
     private static final Logger logger = LoggerFactory.getLogger(PartnerControllerAdvice.class);

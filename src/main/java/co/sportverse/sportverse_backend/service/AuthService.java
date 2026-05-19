@@ -1,13 +1,11 @@
 package co.sportverse.sportverse_backend.service;
 
-import co.sportverse.sportverse_backend.dto.GenerateOtpRequest;
-import co.sportverse.sportverse_backend.dto.GenerateOtpResponse;
-import co.sportverse.sportverse_backend.dto.PartnerLoginRequest;
-import co.sportverse.sportverse_backend.dto.PartnerLoginResponse;
-import co.sportverse.sportverse_backend.dto.VerifyOtpRequest;
-import co.sportverse.sportverse_backend.dto.VerifyOtpResponse;
+import co.sportverse.sportverse_backend.dto.*;
 import co.sportverse.sportverse_backend.entity.User;
+import co.sportverse.sportverse_backend.enums.OtpChannel;
+import co.sportverse.sportverse_backend.enums.SendOtpResultCode;
 import co.sportverse.sportverse_backend.repository.PartnerRepository;
+import co.sportverse.sportverse_backend.service.factory.OtpProviderFactory;
 import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
 import org.bson.Document;
@@ -15,6 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.Objects;
 
 @Service
 public class AuthService {
@@ -30,7 +30,13 @@ public class AuthService {
     @Autowired
     private PartnerRepository partnerRepository;
 
-    public GenerateOtpResponse generateOtp(GenerateOtpRequest request) {
+    @Autowired
+    private OtpProviderFactory otpProviderFactory;
+
+    @Autowired
+    private JwtService jwtService;
+
+    public GenerateOtpResponse generateOtp(SendOtpRequest request) {
         if (request.getPhoneNumber() == null || request.getPhoneNumber().trim().isEmpty()) {
             throw new IllegalArgumentException("Phone number is required");
         }
@@ -68,7 +74,7 @@ public class AuthService {
 
         if (request.getPhoneNumber().equals("8937828771")) {
             logger.info("Auth verify-otp: test phone, returning sample response");
-            return new VerifyOtpResponse(
+            VerifyOtpResponse resp = new VerifyOtpResponse(
                     true,
                     "OTP verified successfully - User logged in",
                     "success",
@@ -76,6 +82,8 @@ public class AuthService {
                     "+918937828771",
                     "Abhijit"
             );
+            resp.setJwtToken(jwtService.createUserAccessToken(JwtService.normalizeIndianPhoneDigits("8937828771")));
+            return resp;
         }
 
         if (request.getCode() == null || request.getCode().trim().isEmpty()) {
@@ -102,7 +110,7 @@ public class AuthService {
             logger.info("OTP verified for existing user. userId: {}, phone: {}", user.getId(), originalPhoneNumber);
         } else {
             String defaultName = "User_" + originalPhoneNumber.substring(Math.max(0, originalPhoneNumber.length() - 4));
-            user = userService.createUser(defaultName, originalPhoneNumber, false);
+            user = userService.createUser(defaultName, originalPhoneNumber, false,null,null,null);
             logger.info("OTP verified, new user. userId: {}, phone: {}", user.getId(), originalPhoneNumber);
         }
 
@@ -110,7 +118,7 @@ public class AuthService {
                 ? "OTP verified successfully - User logged in"
                 : "OTP verified successfully - New user created";
 
-        return new VerifyOtpResponse(
+        VerifyOtpResponse resp = new VerifyOtpResponse(
                 true,
                 message,
                 status,
@@ -118,6 +126,8 @@ public class AuthService {
                 user.getPhone(),
                 user.getName()
         );
+        resp.setJwtToken(jwtService.createUserAccessToken(JwtService.normalizeIndianPhoneDigits(user.getPhone())));
+        return resp;
     }
 
     public PartnerLoginResponse partnerLogin(PartnerLoginRequest request) {
@@ -154,5 +164,31 @@ public class AuthService {
             n = n.substring(1);
         }
         return "+91" + n;
+    }
+
+    public SendOtpResponse sendOtp(SendOtpRequest request) {
+        OtpProvider otpProvider = otpProviderFactory.getOtpProvider(OtpChannel.getChannel(request.getChannel()));
+        otpProvider.sentOtp(request.getPhoneNumber());
+        SendOtpResponse response = new SendOtpResponse(true, SendOtpResultCode.OTP_SENT_SUCCESS,"",OtpChannel.getChannel(request.getChannel()),false);
+        return response;
+    }
+
+    public VerifyOtpResponse verifyOtpCode(VerifyOtpRequest request) {
+        OtpProvider otpProvider = otpProviderFactory.getOtpProvider(OtpChannel.getChannel(request.getChannel()));
+        otpProvider.verifyOtp(request.getPhoneNumber(),request.getCode());
+        User user = userService.getUserByMobileNumber(request.getPhoneNumber());
+        boolean isNewUser = false;
+        String message;
+        if(Objects.nonNull(user)) {
+            message = "Welcome back!";
+        }
+        else{
+            isNewUser = true;
+            user = userService.createUser(null, request.getPhoneNumber(), false, request.getFirstName(), request.getLastName(), request.getEmail());
+            message = "Account created successfully";
+        }
+        String norm = JwtService.normalizeIndianPhoneDigits(user.getPhone());
+        String jwtToken = jwtService.createUserAccessToken(norm);
+        return new VerifyOtpResponse(true,isNewUser,message,jwtToken,user.getPhone());
     }
 }

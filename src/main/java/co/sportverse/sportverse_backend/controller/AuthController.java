@@ -1,11 +1,6 @@
 package co.sportverse.sportverse_backend.controller;
 
-import co.sportverse.sportverse_backend.dto.GenerateOtpRequest;
-import co.sportverse.sportverse_backend.dto.GenerateOtpResponse;
-import co.sportverse.sportverse_backend.dto.PartnerLoginRequest;
-import co.sportverse.sportverse_backend.dto.PartnerLoginResponse;
-import co.sportverse.sportverse_backend.dto.VerifyOtpRequest;
-import co.sportverse.sportverse_backend.dto.VerifyOtpResponse;
+import co.sportverse.sportverse_backend.dto.*;
 import co.sportverse.sportverse_backend.service.AuthService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,10 +10,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = {
-        "https://sportverse.co.in",
-        "http://localhost:8083"
-})
 public class AuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
@@ -27,7 +18,7 @@ public class AuthController {
     private AuthService authService;
 
     @PostMapping("/generate-otp")
-    public ResponseEntity<GenerateOtpResponse> generateOtp(@RequestBody GenerateOtpRequest request) {
+    public ResponseEntity<GenerateOtpResponse> generateOtp(@RequestBody SendOtpRequest request) {
         logger.info("POST /api/auth/generate-otp - Generating OTP. phoneNumber: {}, channel: {}",
                 request.getPhoneNumber(), request.getChannel());
         GenerateOtpResponse response = authService.generateOtp(request);

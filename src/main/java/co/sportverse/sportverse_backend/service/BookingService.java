@@ -1,17 +1,30 @@
 package co.sportverse.sportverse_backend.service;
 
+import co.sportverse.sportverse_backend.dto.CancelBookingRequest;
+import co.sportverse.sportverse_backend.dto.UserBookingsPageResponse;
+import co.sportverse.sportverse_backend.dto.CreateBookingOrderRequest;
+import co.sportverse.sportverse_backend.dto.CreateBookingOrderResponse;
 import co.sportverse.sportverse_backend.dto.BookingItemResponse;
 import co.sportverse.sportverse_backend.dto.CreateBookingRequest;
+import co.sportverse.sportverse_backend.dto.RefundDtoResponse;
 import co.sportverse.sportverse_backend.dto.VenueResponse;
+import co.sportverse.sportverse_backend.entity.BookingStatus;
+import co.sportverse.sportverse_backend.entity.PaymentStatus;
 import co.sportverse.sportverse_backend.entity.TimeSlot;
+import co.sportverse.sportverse_backend.entity.User;
 import co.sportverse.sportverse_backend.entity.Venue;
 import co.sportverse.sportverse_backend.entity.VenueSlots;
-import co.sportverse.sportverse_backend.entity.User;
 import co.sportverse.sportverse_backend.repository.BookingRepository;
 import co.sportverse.sportverse_backend.repository.PartnerRepository;
 import co.sportverse.sportverse_backend.repository.SlotsRepository;
 import co.sportverse.sportverse_backend.repository.VenueRepository;
 import co.sportverse.sportverse_backend.service.UserService;
+import co.sportverse.sportverse_backend.util.BookingEarliestSlotStart;
+import com.mongodb.ReadConcern;
+import com.mongodb.TransactionOptions;
+import com.mongodb.WriteConcern;
+import com.mongodb.client.ClientSession;
+import com.mongodb.client.MongoClient;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,10 +32,13 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class BookingService {
@@ -44,6 +60,21 @@ public class BookingService {
 
     @Autowired
     private co.sportverse.sportverse_backend.service.NotificationService notificationService;
+
+    @Autowired
+    private RazorpayOrderService razorpayOrderService;
+
+    @Autowired
+    private RazorpayRefundService razorpayRefundService;
+
+    @Autowired
+    private SlotsService slotsService;
+
+    @Autowired
+    private MongoClient mongoClient;
+
+    @Autowired
+    private UserService userService;
 
     public List<BookingItemResponse> getUserBookings(String userId) {
         Query query = new Query();
@@ -137,25 +168,14 @@ public class BookingService {
         if (slotsDocs != null && !slotsDocs.isEmpty()) {
             List<TimeSlot> selected = new ArrayList<>();
             for (Document slotDoc : slotsDocs) {
-                TimeSlot slot = new TimeSlot();
-                slot.setSlotId(slotDoc.getString("slotId"));
-                slot.setStartTime(slotDoc.getString("startTime"));
-                slot.setEndTime(slotDoc.getString("endTime"));
-                slot.setStartTimeAmPm(slotDoc.getString("startTimeAmPm"));
-                slot.setEndTimeAmPm(slotDoc.getString("endTimeAmPm"));
-                Object priceValue = slotDoc.get("price");
-                if (priceValue instanceof Number) {
-                    slot.setPrice(((Number) priceValue).intValue());
-                }
-                slot.setBooked(slotDoc.getBoolean("isBooked", false));
-                selected.add(slot);
+                selected.add(TimeSlot.fromDocument(slotDoc));
             }
             item.setSlots(selected);
         } else {
             @SuppressWarnings("unchecked")
             List<String> slotIds = (List<String>) doc.get("slotIds");
             if (slotIds != null && !slotIds.isEmpty()) {
-                VenueSlots vs = slotsRepository.findByVenueIdAndDate(venueId, date);
+                VenueSlots vs = slotsService.getSlotsByVenueAndDate(venueId, date);
                 if (vs != null && vs.getSlots() != null) {
                     Set<String> target = new HashSet<>(slotIds);
                     List<TimeSlot> selected = new ArrayList<>();
@@ -173,7 +193,247 @@ public class BookingService {
             }
         }
 
+        @SuppressWarnings("unchecked")
+        List<String> persistedSlotIds = (List<String>) doc.get("slotIds");
+        if (persistedSlotIds != null && !persistedSlotIds.isEmpty()) {
+            item.setSlotIds(new ArrayList<>(persistedSlotIds));
+        } else {
+            item.setSlotIds(extractEmbeddedSlotIds(doc));
+        }
+
+        Object refundRaw = doc.get("refundDto");
+        if (refundRaw instanceof Document refundDoc) {
+            item.setRefundDto(mapRefundDocument(refundDoc));
+        }
+
         return item;
+    }
+
+    private RefundDtoResponse mapRefundDocument(Document rd) {
+        if (rd == null) {
+            return null;
+        }
+        RefundDtoResponse o = new RefundDtoResponse();
+        o.setStatus(rd.getString("status"));
+        o.setRefundId(rd.getString("refundId"));
+        Object amt = rd.get("amount");
+        if (amt instanceof Number n) {
+            o.setAmount(n.longValue());
+        }
+        o.setPaymentId(rd.getString("paymentId"));
+        Object created = rd.get("createdAt");
+        if (created instanceof Number n) {
+            o.setCreatedAt(n.longValue());
+        }
+        Object acqRaw = rd.get("acquirer_data");
+        if (acqRaw instanceof List<?> list) {
+            List<String> acq = new ArrayList<>();
+            for (Object x : list) {
+                if (x != null) {
+                    acq.add(x.toString());
+                }
+            }
+            o.setAcquirerData(acq);
+        }
+        o.setSpeed(rd.getString("speed"));
+        o.setError(rd.getString("error"));
+        return o;
+    }
+
+    private List<String> extractEmbeddedSlotIds(Document doc) {
+        @SuppressWarnings("unchecked")
+        List<Document> slotsDocs = (List<Document>) doc.get("slots");
+        if (slotsDocs == null || slotsDocs.isEmpty()) {
+            return null;
+        }
+        List<String> out = new ArrayList<>();
+        for (Document s : slotsDocs) {
+            if (s == null) {
+                continue;
+            }
+            String sid = s.getString("slotId");
+            if (sid != null && !sid.isBlank()) {
+                out.add(sid.trim());
+            }
+        }
+        return out.isEmpty() ? null : out;
+    }
+
+    private List<String> resolveSlotIdsForMutation(Document booking) {
+        @SuppressWarnings("unchecked")
+        List<String> slotIds = (List<String>) booking.get("slotIds");
+        if (slotIds != null && !slotIds.isEmpty()) {
+            List<String> normalized = new ArrayList<>();
+            for (String s : slotIds) {
+                if (s != null && !s.trim().isEmpty()) {
+                    normalized.add(s.trim());
+                }
+            }
+            if (!normalized.isEmpty()) {
+                return normalized;
+            }
+        }
+        List<String> fromSlots = extractEmbeddedSlotIds(booking);
+        if (fromSlots == null) {
+            throw new IllegalArgumentException("Booking has no slot ids");
+        }
+        return fromSlots;
+    }
+
+    private static String bookingUserIdString(Document booking) {
+        Object raw = booking.get("userId");
+        if (raw == null) {
+            return null;
+        }
+        if (raw instanceof ObjectId oid) {
+            return oid.toHexString();
+        }
+        return raw.toString().trim();
+    }
+
+    private static String normalizeIndianMobileDigits(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "";
+        }
+        String cleaned = raw.trim().replaceAll("\\s+", "");
+        if (cleaned.startsWith("91") && cleaned.length() == 12) {
+            return cleaned.substring(2);
+        }
+        return cleaned;
+    }
+
+    private boolean matchesBookingUser(Document booking, String userId) {
+        if (userId == null || userId.isBlank()) {
+            return false;
+        }
+        String expected = userId.trim();
+        String actual = bookingUserIdString(booking);
+        if (actual == null || actual.isEmpty()) {
+            return false;
+        }
+        if (actual.equals(expected)) {
+            return true;
+        }
+        try {
+            if (actual.equals(new ObjectId(expected).toHexString())) {
+                return true;
+            }
+        } catch (IllegalArgumentException ignored) {
+            // expected is not a Mongo id
+        }
+        String n1 = normalizeIndianMobileDigits(expected);
+        String n2 = normalizeIndianMobileDigits(actual);
+        return !n1.isEmpty() && n1.equals(n2);
+    }
+
+    private void assertBookingOwnedByUser(Document booking, String userId) {
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("userId is required");
+        }
+        if (bookingUserIdString(booking) == null || bookingUserIdString(booking).isEmpty()) {
+            throw new IllegalArgumentException("Booking has no userId");
+        }
+        if (!matchesBookingUser(booking, userId)) {
+            throw new IllegalArgumentException("You are not allowed to cancel this booking");
+        }
+    }
+
+    /**
+     * Ensures the booking's stored user reference matches the authenticated user (Mongo id and/or phone shapes).
+     */
+    private void assertBookingOwnedByAuthenticatedUser(Document booking, User user, String forbiddenMessage) {
+        if (user == null) {
+            throw new IllegalArgumentException("Authenticated user is required");
+        }
+        if (bookingUserIdString(booking) == null || bookingUserIdString(booking).isEmpty()) {
+            throw new IllegalArgumentException("Booking has no userId");
+        }
+        String phone = user.getPhone() != null ? user.getPhone().trim() : "";
+        if (!phone.isEmpty() && matchesBookingUser(booking, phone)) {
+            return;
+        }
+        throw new IllegalArgumentException(forbiddenMessage);
+    }
+
+    /**
+     * Cancels the booking (refund PENDING) and releases venue slots atomically on a replica set / sharded cluster.
+     */
+    private void cancelBookingAndReleaseSlotsInTransaction(String bookingId, String venueId, String date, List<String> slotIds) {
+        TransactionOptions opts = TransactionOptions.builder()
+                .readConcern(ReadConcern.MAJORITY)
+                .writeConcern(WriteConcern.MAJORITY)
+                .build();
+        try (ClientSession session = mongoClient.startSession()) {
+            session.withTransaction(() -> {
+                bookingRepository.cancelBookingWithRefundPending(session, bookingId);
+                slotsRepository.releaseBookedSlotsForCancellation(session, venueId, date, slotIds);
+                return null;
+            }, opts);
+        }
+    }
+
+    public BookingItemResponse cancelConfirmedBookingWithRefund(CancelBookingRequest request, String jwtSubject) {
+        if (request == null) {
+            throw new IllegalArgumentException("Request body is required");
+        }
+        if (request.getBookingId() == null || request.getBookingId().isBlank()) {
+            throw new IllegalArgumentException("bookingId is required");
+        }
+        String bookingId = request.getBookingId().trim();
+        Document booking = bookingRepository.findById(bookingId);
+        if (booking == null) {
+            throw new IllegalArgumentException("Booking not found");
+        }
+
+        User user = userService.requireUserForJwtSubject(jwtSubject);
+        assertBookingOwnedByAuthenticatedUser(
+                booking, user, "You are not allowed to cancel this booking");
+
+        String bookingStatus = booking.getString("bookingStatus");
+        if (BookingStatus.CANCELLED.name().equals(bookingStatus)) {
+            throw new IllegalArgumentException("Booking is already cancelled");
+        }
+        if (!BookingStatus.CONFIRMED.name().equals(bookingStatus)) {
+            throw new IllegalArgumentException("Only CONFIRMED bookings can be cancelled via this API");
+        }
+
+        Document payment = (Document) booking.get("payment");
+        String paymentStatus = payment != null ? payment.getString("status") : null;
+        if (!PaymentStatus.SUCCESS.name().equals(paymentStatus)) {
+            throw new IllegalArgumentException("Payment must be SUCCESS to request a refund");
+        }
+        String razorpayPaymentId = payment != null ? payment.getString("razorpayPaymentId") : null;
+        if (razorpayPaymentId == null || razorpayPaymentId.isBlank()) {
+            throw new IllegalArgumentException("Booking has no Razorpay payment id");
+        }
+
+        ZonedDateTime earliest = BookingEarliestSlotStart.earliestStart(booking);
+        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Kolkata"));
+        if (!now.isBefore(earliest)) {
+            throw new IllegalArgumentException("Cancellation is not allowed after the earliest slot start time");
+        }
+
+        String venueId = booking.getObjectId("venueId").toString();
+        String date = booking.getString("date");
+        List<String> slotIds = resolveSlotIdsForMutation(booking);
+
+        cancelBookingAndReleaseSlotsInTransaction(bookingId, venueId, date, slotIds);
+
+        try {
+            Document refundFields = razorpayRefundService.createFullRefundDocument(razorpayPaymentId, bookingId);
+            bookingRepository.replaceRefundDto(bookingId, refundFields);
+        } catch (RuntimeException e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "Refund failed";
+            bookingRepository.patchRefundDto(bookingId,
+                    new Document("status", "FAILED").append("error", msg));
+            throw e;
+        }
+
+        Document updated = bookingRepository.findById(bookingId);
+        if (updated == null) {
+            throw new IllegalStateException("Booking disappeared after cancellation");
+        }
+        return mapDocumentToBookingItem(updated);
     }
 
     private static void addUserIdMatchCriteria(Query query, String userId) {
@@ -235,6 +495,342 @@ public class BookingService {
                 request.getPaymentStatus(),
                 request.getPaymentScreenshotUrl()
         );
+    }
+
+    public CreateBookingOrderResponse reserveSlotsCreateBookingAndOrder(
+            CreateBookingOrderRequest request, String authenticatedUserSubject) {
+        validateCreateBookingOrderRequest(request);
+
+        User user = userService.requireUserForJwtSubject(authenticatedUserSubject);
+        String userId = user.getPhone();
+
+        String partnerId = request.getPartnerId().trim();
+        String venueId = request.getVenueId().trim();
+        String date = request.getDate().trim();
+        SlotsService.SlotReservationResult reservation = slotsService.reserveSlotsForBooking(venueId, date, request.getSlotIds());
+        List<String> slotIds = reservation.getSlotIds();
+        int totalAmount = reservation.getTotalAmount();
+
+        String bookingId = null;
+        try {
+            bookingId = bookingRepository.createBookingWithSlotIds(
+                    partnerId,
+                    userId,
+                    venueId,
+                    slotIds,
+                    date,
+                    totalAmount,
+                    BookingStatus.PENDING.name(),
+                    PaymentStatus.PENDING.name(),
+                    request.getPaymentScreenshotUrl()
+            );
+
+            RazorpayOrderService.RazorpayOrderResult order = razorpayOrderService.createOrder(totalAmount, bookingId);
+            bookingRepository.updateRazorpayOrderId(bookingId, order.getOrderId());
+
+            return new CreateBookingOrderResponse(
+                    bookingId,
+                    order.getKey(),
+                    order.getOrderId(),
+                    order.getAmount(),
+                    order.getCurrency()
+            );
+        } catch (RuntimeException e) {
+            if (bookingId != null) {
+                try {
+                    bookingRepository.deleteById(bookingId);
+                } catch (Exception deleteEx) {
+                    System.err.println("Failed to delete booking after order creation failure: " + deleteEx.getMessage());
+                }
+            }
+            try {
+                slotsService.releaseReservedSlotsForBooking(venueId, date, slotIds, reservation.getReservedAt());
+            } catch (Exception releaseEx) {
+                System.err.println("Failed to release reserved slots after order creation failure: " + releaseEx.getMessage());
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * Same as {@link #reserveSlotsCreateBookingAndOrder} except no Razorpay order is created; booking stays
+     * pending with {@code razorpayOrderId} unset.
+     */
+    public CreateBookingOrderResponse reserveSlotsCreateBookingManual(
+            CreateBookingOrderRequest request, String authenticatedUserSubject) {
+        validateCreateBookingOrderRequest(request);
+
+        User user = userService.requireUserForJwtSubject(authenticatedUserSubject);
+        String userId = user.getPhone();
+
+        String partnerId = request.getPartnerId().trim();
+        String venueId = request.getVenueId().trim();
+        String date = request.getDate().trim();
+        SlotsService.SlotReservationResult reservation = slotsService.reserveSlotsForBooking(venueId, date, request.getSlotIds());
+        List<String> slotIds = reservation.getSlotIds();
+        int totalAmount = reservation.getTotalAmount();
+
+        String bookingId = null;
+        try {
+            bookingId = bookingRepository.createBookingWithSlotIds(
+                    partnerId,
+                    userId,
+                    venueId,
+                    slotIds,
+                    date,
+                    totalAmount,
+                    BookingStatus.PENDING.name(),
+                    PaymentStatus.PENDING.name(),
+                    request.getPaymentScreenshotUrl()
+            );
+
+            return new CreateBookingOrderResponse(
+                    bookingId,
+                    null,
+                    null,
+                    totalAmount * 100,
+                    "INR"
+            );
+        } catch (RuntimeException e) {
+            if (bookingId != null) {
+                try {
+                    bookingRepository.deleteById(bookingId);
+                } catch (Exception deleteEx) {
+                    System.err.println("Failed to delete booking after manual order failure: " + deleteEx.getMessage());
+                }
+            }
+            try {
+                slotsService.releaseReservedSlotsForBooking(venueId, date, slotIds, reservation.getReservedAt());
+            } catch (Exception releaseEx) {
+                System.err.println("Failed to release reserved slots after manual order failure: " + releaseEx.getMessage());
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * Partner-initiated manual pending booking (no Razorpay). {@code partnerId} comes from JWT; booking {@code userId}
+     * is the customer identifier from {@link CreateBookingOrderRequest#getUserId()} (e.g. phone as stored on users/bookings).
+     */
+    public CreateBookingOrderResponse reserveSlotsCreateBookingManualForPartner(
+            CreateBookingOrderRequest request,
+            String partnerIdFromToken) {
+        validatePartnerManualBookingRequest(request);
+        String partnerId = partnerIdFromToken.trim();
+        String userId = request.getUserId().trim();
+        String venueId = request.getVenueId().trim();
+        String date = request.getDate().trim();
+        SlotsService.SlotReservationResult reservation = slotsService.reserveSlotsForBooking(venueId, date, request.getSlotIds());
+        List<String> slotIds = reservation.getSlotIds();
+        int totalAmount = reservation.getTotalAmount();
+
+        String bookingId = null;
+        try {
+            bookingId = bookingRepository.createBookingWithSlotIds(
+                    partnerId,
+                    userId,
+                    venueId,
+                    slotIds,
+                    date,
+                    totalAmount,
+                    BookingStatus.PENDING.name(),
+                    PaymentStatus.PENDING.name(),
+                    request.getPaymentScreenshotUrl()
+            );
+
+            return new CreateBookingOrderResponse(
+                    bookingId,
+                    null,
+                    null,
+                    totalAmount * 100,
+                    "INR"
+            );
+        } catch (RuntimeException e) {
+            if (bookingId != null) {
+                try {
+                    bookingRepository.deleteById(bookingId);
+                } catch (Exception deleteEx) {
+                    System.err.println("Failed to delete partner manual booking after failure: " + deleteEx.getMessage());
+                }
+            }
+            try {
+                slotsService.releaseReservedSlotsForBooking(venueId, date, slotIds, reservation.getReservedAt());
+            } catch (Exception releaseEx) {
+                System.err.println("Failed to release reserved slots after partner manual order failure: " + releaseEx.getMessage());
+            }
+            throw e;
+        }
+    }
+
+    private static void validatePartnerManualBookingRequest(CreateBookingOrderRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Request body is required");
+        }
+        if (request.getUserId() == null || request.getUserId().trim().isEmpty()) {
+            throw new IllegalArgumentException("userId is required (customer phone or id on the booking)");
+        }
+        if (request.getVenueId() == null || request.getVenueId().trim().isEmpty()) {
+            throw new IllegalArgumentException("venueId is required");
+        }
+        if (request.getDate() == null || request.getDate().trim().isEmpty()) {
+            throw new IllegalArgumentException("date is required (yyyy-MM-dd)");
+        }
+        if (request.getSlotIds() == null || request.getSlotIds().isEmpty()) {
+            throw new IllegalArgumentException("slotIds are required");
+        }
+    }
+
+    private static void validateCreateBookingOrderRequest(CreateBookingOrderRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Request body is required");
+        }
+        if (request.getPartnerId() == null || request.getPartnerId().trim().isEmpty()) {
+            throw new IllegalArgumentException("partnerId is required");
+        }
+        if (request.getVenueId() == null || request.getVenueId().trim().isEmpty()) {
+            throw new IllegalArgumentException("venueId is required");
+        }
+        if (request.getDate() == null || request.getDate().trim().isEmpty()) {
+            throw new IllegalArgumentException("date is required (yyyy-MM-dd)");
+        }
+        if (request.getSlotIds() == null || request.getSlotIds().isEmpty()) {
+            throw new IllegalArgumentException("slotIds are required");
+        }
+    }
+
+    public PaymentVerificationContext getPendingPaymentVerificationContext(String bookingId, User authenticatedUser) {
+        if (bookingId == null || bookingId.trim().isEmpty()) {
+            throw new IllegalArgumentException("bookingId is required");
+        }
+        if (authenticatedUser == null) {
+            throw new IllegalArgumentException("Authenticated user is required");
+        }
+
+        Document booking = bookingRepository.findById(bookingId.trim());
+        if (booking == null) {
+            throw new IllegalArgumentException("Booking not found");
+        }
+
+        assertBookingOwnedByAuthenticatedUser(
+                booking, authenticatedUser, "You are not allowed to verify payment for this booking");
+
+        String bookingStatus = booking.getString("bookingStatus");
+        Document payment = (Document) booking.get("payment");
+        String paymentStatus = payment != null ? payment.getString("status") : null;
+        if (!BookingStatus.PENDING.name().equals(bookingStatus) || !PaymentStatus.PENDING.name().equals(paymentStatus)) {
+            throw new IllegalArgumentException("Booking and payment must be PENDING");
+        }
+
+        String venueId = booking.getObjectId("venueId").toString();
+        String date = booking.getString("date");
+        @SuppressWarnings("unchecked")
+        List<String> slotIds = (List<String>) booking.get("slotIds");
+        if (slotIds == null || slotIds.isEmpty()) {
+            throw new IllegalArgumentException("Booking has no slotIds");
+        }
+        String razorpayOrderId = payment.getString("razorpayOrderId");
+        if (razorpayOrderId == null || razorpayOrderId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Booking has no Razorpay order id");
+        }
+
+        return new PaymentVerificationContext(bookingId.trim(), venueId, date, slotIds, razorpayOrderId);
+    }
+
+    public void confirmPayment(String bookingId, String orderId, String paymentId, String signature) {
+        bookingRepository.updatePaymentByBookingId(
+                bookingId,
+                PaymentStatus.SUCCESS,
+                orderId,
+                paymentId,
+                signature,
+                BookingStatus.CONFIRMED
+        );
+    }
+
+    /**
+     * Partner-only confirmation analogous to Razorpay {@code /api/payments/verify} minus order-id matching (no RZP flow)
+     * and no signature verification. Persists synthetic order and payment ids (random UUIDs) and confirms the booking.
+     */
+    public BookingItemResponse confirmBookingPaymentManualForPartner(String bookingId, String partnerIdFromToken) {
+        if (bookingId == null || bookingId.isBlank()) {
+            throw new IllegalArgumentException("bookingId is required");
+        }
+        if (partnerIdFromToken == null || partnerIdFromToken.isBlank()) {
+            throw new IllegalArgumentException("partnerId is required");
+        }
+
+        Document booking = bookingRepository.findById(bookingId.trim());
+        if (booking == null) {
+            throw new IllegalArgumentException("Booking not found");
+        }
+        String storedPartnerId = booking.getString("partnerId");
+        if (storedPartnerId == null || !storedPartnerId.trim().equals(partnerIdFromToken.trim())) {
+            throw new IllegalArgumentException("You are not allowed to confirm payment for this booking");
+        }
+
+        String bookingStatus = booking.getString("bookingStatus");
+        Document payment = (Document) booking.get("payment");
+        String paymentStatus = payment != null ? payment.getString("status") : null;
+        if (!BookingStatus.PENDING.name().equals(bookingStatus) || !PaymentStatus.PENDING.name().equals(paymentStatus)) {
+            throw new IllegalArgumentException("Booking and payment must be PENDING");
+        }
+
+        String venueId = booking.getObjectId("venueId").toString();
+        String date = booking.getString("date");
+        List<String> slotIds = resolveSlotIdsForMutation(booking);
+
+        slotsService.ensureSlotsReservedForBooking(venueId, date, slotIds);
+
+        String syntheticOrderId = UUID.randomUUID().toString();
+        String syntheticPaymentId = UUID.randomUUID().toString();
+        confirmPayment(bookingId.trim(), syntheticOrderId, syntheticPaymentId, "");
+        slotsService.markReservedSlotsBookedForBooking(venueId, date, slotIds);
+
+        return getBookingDetailsById(bookingId.trim());
+    }
+
+    public BookingItemResponse getBookingDetailsById(String bookingId) {
+        Document booking = bookingRepository.findById(bookingId);
+        if (booking == null) {
+            throw new IllegalArgumentException("Booking not found");
+        }
+        return mapDocumentToBookingItem(booking);
+    }
+
+    public static class PaymentVerificationContext {
+        private final String bookingId;
+        private final String venueId;
+        private final String date;
+        private final List<String> slotIds;
+        private final String razorpayOrderId;
+
+        public PaymentVerificationContext(String bookingId, String venueId, String date, List<String> slotIds, String razorpayOrderId) {
+            this.bookingId = bookingId;
+            this.venueId = venueId;
+            this.date = date;
+            this.slotIds = slotIds;
+            this.razorpayOrderId = razorpayOrderId;
+        }
+
+        public String getBookingId() {
+            return bookingId;
+        }
+
+        public String getVenueId() {
+            return venueId;
+        }
+
+        public String getDate() {
+            return date;
+        }
+
+        public List<String> getSlotIds() {
+            return slotIds;
+        }
+
+        public String getRazorpayOrderId() {
+            return razorpayOrderId;
+        }
     }
 
     public String createBooking(String partnerId, String userId, String venueId, List<CreateBookingRequest.SlotDto> slotDtos, String date, String status, String paymentStatus, String paymentScreenshotUrl) {
@@ -349,6 +945,47 @@ public class BookingService {
             cleaned = cleaned.substring(2);
         }
         return getUserBookings(cleaned);
+    }
+
+    /**
+     * Paged bookings for the authenticated JWT subject (normalized mobile digits — same semantics as listing by phone).
+     */
+    public UserBookingsPageResponse listMyBookingsPaged(
+            String jwtSubject,
+            String bookingStatusFilter,
+            int page,
+            int pageSize) {
+        if (jwtSubject == null || jwtSubject.trim().isEmpty()) {
+            throw new IllegalArgumentException("Authenticated user identifier is required");
+        }
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(Math.max(pageSize <= 0 ? 10 : pageSize, 1), 100);
+
+        String cleaned = jwtSubject.trim().replaceAll("\\s+", "");
+        if (cleaned.startsWith("91") && cleaned.length() == 12) {
+            cleaned = cleaned.substring(2);
+        }
+
+        Query query = new Query();
+        addUserIdMatchCriteria(query, cleaned);
+        if (bookingStatusFilter != null && !bookingStatusFilter.isBlank()) {
+            try {
+                BookingStatus bs = BookingStatus.valueOf(bookingStatusFilter.trim().toUpperCase());
+                query.addCriteria(Criteria.where("bookingStatus").is(bs.name()));
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException(
+                        "Invalid bookingStatus; use one of: " + java.util.Arrays.toString(BookingStatus.values()));
+            }
+        }
+
+        Document filter = query.getQueryObject();
+        List<Document> bookingDocs =
+                bookingRepository.findByQueryPaged(filter, safePage * safeSize, safeSize);
+        List<BookingItemResponse> items = new ArrayList<>();
+        for (Document doc : bookingDocs) {
+            items.add(mapDocumentToBookingItem(doc));
+        }
+        return new UserBookingsPageResponse(items, safePage, safeSize);
     }
     
     public void cancelBooking(String bookingId) {

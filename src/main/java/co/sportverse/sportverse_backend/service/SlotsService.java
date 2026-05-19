@@ -7,14 +7,147 @@ import co.sportverse.sportverse_backend.repository.SlotsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 @Service
 public class SlotsService {
 
     @Autowired
     private SlotsRepository slotsRepository;
+
+    public SlotReservationResult reserveSlotsForBooking(String venueId, String date, List<String> requestedSlotIds) {
+        if (venueId == null || venueId.trim().isEmpty()) {
+            throw new IllegalArgumentException("venueId is required");
+        }
+        if (date == null || date.trim().isEmpty()) {
+            throw new IllegalArgumentException("date is required (yyyy-MM-dd)");
+        }
+        List<String> slotIds = normalizeSlotIds(requestedSlotIds);
+
+        Instant reservedAt = Instant.now();
+        Instant reservationExpiresBefore = reservedAt.minus(10, ChronoUnit.MINUTES);
+        boolean reserved = slotsRepository.reserveSlotsIfAvailable(
+                venueId.trim(),
+                date.trim(),
+                slotIds,
+                reservedAt,
+                reservationExpiresBefore
+        );
+        if (!reserved) {
+            throw new IllegalArgumentException("Selected slots are not available");
+        }
+
+        int totalAmount = calculateTotalAmount(venueId.trim(), date.trim(), slotIds);
+        return new SlotReservationResult(slotIds, reservedAt, totalAmount);
+    }
+
+    public void releaseReservedSlotsForBooking(String venueId, String date, List<String> slotIds, Instant reservedAt) {
+        if (venueId == null || venueId.trim().isEmpty() || date == null || date.trim().isEmpty()
+                || slotIds == null || slotIds.isEmpty() || reservedAt == null) {
+            return;
+        }
+        slotsRepository.releaseReservedSlots(venueId.trim(), date.trim(), slotIds, reservedAt);
+    }
+
+    public void ensureSlotsReservedForBooking(String venueId, String date, List<String> requestedSlotIds) {
+        if (venueId == null || venueId.trim().isEmpty()) {
+            throw new IllegalArgumentException("venueId is required");
+        }
+        if (date == null || date.trim().isEmpty()) {
+            throw new IllegalArgumentException("date is required (yyyy-MM-dd)");
+        }
+        List<String> slotIds = normalizeSlotIds(requestedSlotIds);
+        boolean reserved = slotsRepository.areSlotsReserved(venueId.trim(), date.trim(), slotIds);
+        if (!reserved) {
+            throw new IllegalArgumentException("Selected slots are not reserved");
+        }
+    }
+
+    public void markReservedSlotsBookedForBooking(String venueId, String date, List<String> requestedSlotIds) {
+        if (venueId == null || venueId.trim().isEmpty()) {
+            throw new IllegalArgumentException("venueId is required");
+        }
+        if (date == null || date.trim().isEmpty()) {
+            throw new IllegalArgumentException("date is required (yyyy-MM-dd)");
+        }
+        List<String> slotIds = normalizeSlotIds(requestedSlotIds);
+        boolean updated = slotsRepository.markReservedSlotsBooked(venueId.trim(), date.trim(), slotIds);
+        if (!updated) {
+            throw new IllegalArgumentException("Selected slots are not reserved");
+        }
+    }
+
+    private List<String> normalizeSlotIds(List<String> requestedSlotIds) {
+        if (requestedSlotIds == null || requestedSlotIds.isEmpty()) {
+            throw new IllegalArgumentException("slotIds are required");
+        }
+        LinkedHashSet<String> slotIds = new LinkedHashSet<>();
+        for (String slotId : requestedSlotIds) {
+            if (slotId == null || slotId.trim().isEmpty()) {
+                throw new IllegalArgumentException("slotId is required");
+            }
+            slotIds.add(slotId.trim());
+        }
+        return new ArrayList<>(slotIds);
+    }
+
+    private int calculateTotalAmount(String venueId, String date, List<String> slotIds) {
+        VenueSlots venueSlots = slotsRepository.findByVenueIdAndDate(venueId, date);
+        if (venueSlots == null || venueSlots.getSlots() == null) {
+            throw new IllegalArgumentException("Slots not found for venue/date");
+        }
+
+        Set<String> requestedSlotIds = new HashSet<>(slotIds);
+        Set<String> pricedSlotIds = new HashSet<>();
+        int totalAmount = 0;
+        for (TimeSlot slot : venueSlots.getSlots()) {
+            if (slot.getSlotId() != null && requestedSlotIds.contains(slot.getSlotId())) {
+                pricedSlotIds.add(slot.getSlotId());
+                if (slot.getPrice() > 0) {
+                    totalAmount += slot.getPrice();
+                }
+            }
+        }
+        if (pricedSlotIds.size() != requestedSlotIds.size()) {
+            throw new IllegalArgumentException("One or more selected slots were not found");
+        }
+        if (totalAmount <= 0) {
+            throw new IllegalArgumentException("Amount must be > 0");
+        }
+        return totalAmount;
+    }
+
+    public static class SlotReservationResult {
+        private final List<String> slotIds;
+        private final Instant reservedAt;
+        private final int totalAmount;
+
+        public SlotReservationResult(List<String> slotIds, Instant reservedAt, int totalAmount) {
+            this.slotIds = slotIds;
+            this.reservedAt = reservedAt;
+            this.totalAmount = totalAmount;
+        }
+
+        public List<String> getSlotIds() {
+            return slotIds;
+        }
+
+        public Instant getReservedAt() {
+            return reservedAt;
+        }
+
+        public int getTotalAmount() {
+            return totalAmount;
+        }
+    }
 
     public VenueSlots createSlots(CreateSlotsRequest request) {
         if (request.getVenueId() == null || request.getVenueId().trim().isEmpty()) {
@@ -30,7 +163,10 @@ public class SlotsService {
         // Convert new slots to TimeSlot objects
         java.util.List<TimeSlot> newSlots = new java.util.ArrayList<>();
         for (CreateSlotsRequest.SlotDto s : request.getSlots()) {
-            newSlots.add(new TimeSlot(s.getSlotId(), s.getStartTime(), s.getEndTime(), s.getStartTimeAmPm(), s.getEndTimeAmPm(), s.getPrice(), s.isBooked()));
+            TimeSlot ts = new TimeSlot(s.getSlotId(), s.getStartTime(), s.getEndTime(),
+                    s.getStartTimeAmPm(), s.getEndTimeAmPm(), s.getPrice(), s.isBooked());
+            ts.setStatus(s.isBooked() ? "BOOKED" : "AVAILABLE");
+            newSlots.add(ts);
         }
 
         // Check for overlaps within new slots

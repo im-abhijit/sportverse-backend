@@ -1,0 +1,7 @@
+package co.sportverse.sportverse_backend.exceptions;
+
+public class InvalidOtpException extends RuntimeException {
+    public InvalidOtpException(String message) {
+        super(message);
+    }
+}

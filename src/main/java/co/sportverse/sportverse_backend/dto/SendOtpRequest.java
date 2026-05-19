@@ -1,12 +1,12 @@
 package co.sportverse.sportverse_backend.dto;
 
-public class GenerateOtpRequest {
+public class SendOtpRequest {
     private String phoneNumber;
-    private String channel = "sms";
+    private String channel;
 
-    public GenerateOtpRequest() {}
+    public SendOtpRequest() {}
 
-    public GenerateOtpRequest(String phoneNumber, String channel) {
+    public SendOtpRequest(String phoneNumber, String channel) {
         this.phoneNumber = phoneNumber;
         this.channel = channel;
     }

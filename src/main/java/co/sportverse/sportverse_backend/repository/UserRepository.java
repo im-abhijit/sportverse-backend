@@ -6,12 +6,16 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Updates.combine;
 import static com.mongodb.client.model.Updates.set;
 
 @Component
@@ -56,6 +60,40 @@ public class UserRepository {
         Bson filter = eq("_id", new org.bson.types.ObjectId(userId));
         Bson update = set("isVenueOwner", isVenueOwner);
         usersCollection.updateOne(filter, update);
+    }
+
+    /**
+     * Updates profile fields by user id; only non-null arguments are applied.
+     */
+    public User updateProfileById(String userId, String firstName, String lastName, String email) {
+        if (userId == null || userId.trim().isEmpty()) {
+            return null;
+        }
+        ObjectId oid;
+        try {
+            oid = new ObjectId(userId.trim());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+        Bson filter = eq("_id", oid);
+        Document existing = usersCollection.find(filter).first();
+        if (existing == null) {
+            return null;
+        }
+        List<Bson> patches = new ArrayList<>();
+        if (firstName != null) {
+            patches.add(set("firstName", firstName.trim()));
+        }
+        if (lastName != null) {
+            patches.add(set("lastName", lastName.trim()));
+        }
+        if (email != null) {
+            patches.add(set("email", email.trim()));
+        }
+        if (!patches.isEmpty()) {
+            usersCollection.updateOne(filter, combine(patches));
+        }
+        return User.fromDocument(usersCollection.find(filter).first());
     }
 
     public User updateByMobileNo(String mobileNo, String name, String city) {

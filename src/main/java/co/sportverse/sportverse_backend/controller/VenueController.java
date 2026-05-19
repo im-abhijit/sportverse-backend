@@ -13,10 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/venues")
-@CrossOrigin(origins = {
-        "https://sportverse.co.in",
-        "http://localhost:8083"
-})
 public class VenueController {
 
     private static final Logger logger = LoggerFactory.getLogger(VenueController.class);
