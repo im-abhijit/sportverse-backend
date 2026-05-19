@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * Authenticated user APIs for venue discovery (JWT required via Spring Security).
+ * Public user APIs for venue discovery. If a valid JWT is supplied, it is used only for logging.
  */
 @RestController
 @RequestMapping("/api/user/venues")
