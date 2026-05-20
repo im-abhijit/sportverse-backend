@@ -29,6 +29,20 @@ public class UserVenueController {
     @Autowired
     private VenueService venueService;
 
+    @GetMapping("/trending")
+    public ResponseEntity<ApiResponse> getTrendingVenues(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser) {
+        String userLabel =
+                authenticatedUser != null && authenticatedUser.getSubject() != null ? authenticatedUser.getSubject() : "anonymous";
+        logger.info("GET /api/user/venues/trending - user subject: {}", userLabel);
+
+        List<Venue> venues = venueService.getTrendingVenues();
+        List<VenueResponse> responses = venues.stream().map(VenueResponse::new).toList();
+
+        logger.info("GET /api/user/venues/trending - {} venues for subject {}", responses.size(), userLabel);
+        return ResponseEntity.ok(new ApiResponse(true, "Trending venues retrieved successfully", responses));
+    }
+
     /**
      * Query venues by optional {@code city} and/or {@code sport}.
      * At least one of {@code city} or {@code sport} must be provided.
