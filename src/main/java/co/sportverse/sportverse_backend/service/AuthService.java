@@ -1,5 +1,6 @@
 package co.sportverse.sportverse_backend.service;
 
+import co.sportverse.sportverse_backend.constants.Constant;
 import co.sportverse.sportverse_backend.dto.*;
 import co.sportverse.sportverse_backend.entity.User;
 import co.sportverse.sportverse_backend.enums.OtpChannel;
@@ -168,6 +169,10 @@ public class AuthService {
     }
 
     public SendOtpResponse sendOtp(SendOtpRequest request) {
+        SendOtpResponse bypass = buildSendOtpBypassResponseIfApplicable(request);
+        if (bypass != null) {
+            return bypass;
+        }
         OtpProvider otpProvider = otpProviderFactory.getOtpProvider(OtpChannel.getChannel(request.getChannel()));
         otpProvider.sentOtp(request.getPhoneNumber());
         SendOtpResponse response = new SendOtpResponse(true, SendOtpResultCode.OTP_SENT_SUCCESS,"",OtpChannel.getChannel(request.getChannel()),false);
@@ -175,8 +180,12 @@ public class AuthService {
     }
 
     public VerifyOtpResponse verifyOtpCode(VerifyOtpRequest request) {
-        OtpProvider otpProvider = otpProviderFactory.getOtpProvider(OtpChannel.getChannel(request.getChannel()));
-        otpProvider.verifyOtp(request.getPhoneNumber(),request.getCode());
+        if (!shouldSkipOtpProviderVerify(request)) {
+            OtpProvider otpProvider = otpProviderFactory.getOtpProvider(OtpChannel.getChannel(request.getChannel()));
+            otpProvider.verifyOtp(request.getPhoneNumber(), request.getCode());
+        } else {
+            logger.info("Auth verify-otp: test phone with bypass code, skipping provider verify");
+        }
         User user = userService.getUserByMobileNumber(request.getPhoneNumber());
         boolean isNewUser = false;
         String message;
@@ -195,5 +204,19 @@ public class AuthService {
             username=user.getPhone();
         }
         return new VerifyOtpResponse(true,isNewUser,message,jwtToken,user.getPhone(),username);
+    }
+
+    private static boolean shouldSkipOtpProviderVerify(VerifyOtpRequest request) {
+        return Constant.OTP_SEND_BYPASS_PHONE_DIGITS.equals(JwtService.normalizeIndianPhoneDigits(request.getPhoneNumber()))
+                && Constant.OTP_VERIFY_BYPASS_CODE.equals(
+                        request.getCode() != null ? request.getCode().trim() : "");
+    }
+
+    private SendOtpResponse buildSendOtpBypassResponseIfApplicable(SendOtpRequest request) {
+        if (!Constant.OTP_SEND_BYPASS_PHONE_DIGITS.equals(JwtService.normalizeIndianPhoneDigits(request.getPhoneNumber()))) {
+            return null;
+        }
+        logger.info("Auth send-otp: test phone, skipping OTP send");
+        return new SendOtpResponse(true, SendOtpResultCode.OTP_SENT_SUCCESS, "", OtpChannel.getChannel(request.getChannel()), false);
     }
 }

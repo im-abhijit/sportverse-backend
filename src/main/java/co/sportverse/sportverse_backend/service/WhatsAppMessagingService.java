@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +26,7 @@ public class WhatsAppMessagingService {
     private static final Logger logger = LoggerFactory.getLogger(WhatsAppMessagingService.class);
     private static final String GRAPH_API_BASE_URL = "https://graph.facebook.com";
 
-    @Value("${whatsapp.cloud.graph-api-version:v21.0}")
+    @Value("${whatsapp.cloud.graph-api-version:v25.0}")
     private String graphApiVersion;
 
     @Value("${whatsapp.cloud.phone-number-id:}")
@@ -33,6 +34,12 @@ public class WhatsAppMessagingService {
 
     @Value("${whatsapp.cloud.access-token:}")
     private String accessToken;
+
+    @Value("${whatsapp.cloud.login-otp-template-name:login_otp_template_v2}")
+    private String loginOtpTemplateName;
+
+    @Value("${whatsapp.cloud.login-otp-template-purpose:Login}")
+    private String loginOtpTemplatePurpose;
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -90,6 +97,76 @@ public class WhatsAppMessagingService {
         }
     }
 
+    public Map<String, Object> sendLoginOtpTemplate(String toPhone, String otpCode) {
+        if (toPhone == null || toPhone.trim().isEmpty()) {
+            throw new IllegalArgumentException("toPhone is required");
+        }
+        if (otpCode == null || otpCode.trim().isEmpty()) {
+            throw new IllegalArgumentException("otpCode is required");
+        }
+        validateConfiguration();
+        String recipient = normalizeRecipient(toPhone);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(accessToken.trim());
+
+        Map<String, Object> templateBody = new HashMap<>();
+        templateBody.put("name", loginOtpTemplateName.trim());
+        templateBody.put("language", Map.of("code", "en_US"));
+
+        List<Map<String, Object>> components = new ArrayList<>();
+
+        Map<String, Object> bodyComponent = new HashMap<>();
+        bodyComponent.put("type", "body");
+        List<Map<String, String>> bodyParameters = List.of(
+                Map.of("type", "text", "text", otpCode.trim()),
+                Map.of("type", "text", "text", loginOtpTemplatePurpose.trim())
+        );
+        bodyComponent.put("parameters", bodyParameters);
+        components.add(bodyComponent);
+
+        Map<String, Object> buttonComponent = new HashMap<>();
+        buttonComponent.put("type", "button");
+        buttonComponent.put("sub_type", "url");
+        buttonComponent.put("index", "0");
+        buttonComponent.put("parameters", List.of(Map.of("type", "text", "text", otpCode.trim())));
+        components.add(buttonComponent);
+
+        templateBody.put("components", components);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("messaging_product", "whatsapp");
+        requestBody.put("to", recipient);
+        requestBody.put("type", "template");
+        requestBody.put("template", templateBody);
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+        String url = buildMessagesUrl();
+
+        try {
+            logger.info("WhatsAppMessagingService - Sending login OTP template. recipient: {}", maskPhone(recipient));
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    request,
+                    new ParameterizedTypeReference<>() {}
+            );
+            Map<String, Object> responseBody = response.getBody();
+            Map<String, Object> data = new HashMap<>();
+            data.put("toPhone", recipient);
+            data.put("messageId", extractMessageId(responseBody));
+            logger.info("WhatsAppMessagingService - Login OTP template sent. recipient: {}, messageId: {}",
+                    maskPhone(recipient), data.get("messageId"));
+            return data;
+        } catch (RestClientResponseException e) {
+            String errorMessage = extractGraphErrorMessage(e);
+            logger.warn("WhatsAppMessagingService - Graph API rejected login OTP template. recipient: {}, status: {}, error: {}",
+                    maskPhone(recipient), e.getStatusCode(), errorMessage);
+            throw new RuntimeException("Failed to send WhatsApp login OTP template: " + errorMessage, e);
+        }
+    }
+
     private void validateRequest(String toPhone, String body) {
         if (toPhone == null || toPhone.trim().isEmpty()) {
             throw new IllegalArgumentException("toPhone is required");
@@ -113,7 +190,8 @@ public class WhatsAppMessagingService {
         return GRAPH_API_BASE_URL + "/" + version + "/" + phoneNumberId.trim() + "/messages";
     }
 
-    private String normalizeRecipient(String rawPhone) {
+    /** Digits-only international recipient (no {@code +}), e.g. {@code 919876543210}; used by WhatsApp OTP. */
+    public String normalizeRecipient(String rawPhone) {
         String digits = rawPhone.trim().replaceAll("[^0-9]", "");
         while (digits.startsWith("0")) {
             digits = digits.substring(1);
