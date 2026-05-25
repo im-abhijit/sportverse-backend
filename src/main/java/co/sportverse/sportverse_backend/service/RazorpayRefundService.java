@@ -20,8 +20,8 @@ public class RazorpayRefundService {
     @Autowired
     private RazorpayConfig razorpayConfig;
 
-    private RazorpayClient client() throws RazorpayException {
-        return new RazorpayClient(razorpayConfig.getKey_id(), razorpayConfig.getKey_secret());
+    private RazorpayClient client(RazorpayConfig.ResolvedKeys keys) throws RazorpayException {
+        return new RazorpayClient(keys.keyId(), keys.keySecret());
     }
 
     /**
@@ -29,10 +29,11 @@ public class RazorpayRefundService {
      *
      * @return Mongo subdocument fields for {@code refundDto}; includes {@code Razorpay}-sourced {@code status}.
      */
-    public Document createFullRefundDocument(String razorpayPaymentId, String receipt) {
+    public Document createFullRefundDocument(String razorpayPaymentId, String receipt, String bookingOwnerPhoneRaw) {
         if (razorpayPaymentId == null || razorpayPaymentId.trim().isEmpty()) {
             throw new IllegalArgumentException("Razorpay payment id is required");
         }
+        RazorpayConfig.ResolvedKeys keys = razorpayConfig.resolveKeysForPayerPhone(bookingOwnerPhoneRaw);
         try {
             JSONObject body = new JSONObject();
             body.put("speed", "normal");
@@ -44,7 +45,7 @@ public class RazorpayRefundService {
                 body.put("receipt", rec);
             }
 
-            Refund refund = client().payments.refund(razorpayPaymentId.trim(), body);
+            Refund refund = client(keys).payments.refund(razorpayPaymentId.trim(), body);
             JSONObject json = refund.toJson();
             Document doc = new Document();
 
@@ -73,9 +74,9 @@ public class RazorpayRefundService {
             List<String> acqPairs = new ArrayList<>();
             JSONObject acquirer = json.optJSONObject("acquirer_data");
             if (acquirer != null) {
-                Iterator<String> keys = acquirer.keys();
-                while (keys.hasNext()) {
-                    String key = keys.next();
+                Iterator<String> itr = acquirer.keys();
+                while (itr.hasNext()) {
+                    String key = itr.next();
                     Object value = acquirer.get(key);
                     acqPairs.add(key + "=" + (value != null ? value.toString() : ""));
                 }

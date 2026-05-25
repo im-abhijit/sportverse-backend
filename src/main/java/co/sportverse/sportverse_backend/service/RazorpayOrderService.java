@@ -14,11 +14,11 @@ public class RazorpayOrderService {
     @Autowired
     private RazorpayConfig razorpayConfig;
 
-    private RazorpayClient client() throws RazorpayException {
-        return new RazorpayClient(razorpayConfig.getKey_id(), razorpayConfig.getKey_secret());
+    private RazorpayClient client(RazorpayConfig.ResolvedKeys keys) throws RazorpayException {
+        return new RazorpayClient(keys.keyId(), keys.keySecret());
     }
 
-    public RazorpayOrderResult createOrder(int amountInRupees, String receipt) {
+    public RazorpayOrderResult createOrder(int amountInRupees, String receipt, String payerPhoneForCredentials) {
         if (amountInRupees <= 0) {
             throw new IllegalArgumentException("Amount must be > 0");
         }
@@ -26,18 +26,20 @@ public class RazorpayOrderService {
             throw new IllegalArgumentException("receipt is required");
         }
 
+        RazorpayConfig.ResolvedKeys keys = razorpayConfig.resolveKeysForPayerPhone(payerPhoneForCredentials);
+
         try {
             JSONObject orderRequest = new JSONObject();
             orderRequest.put("amount", amountInRupees * 100);
             orderRequest.put("currency", "INR");
             orderRequest.put("receipt", receipt.trim().length() <= 40 ? receipt.trim() : receipt.trim().substring(0, 40));
 
-            Order order = client().orders.create(orderRequest);
+            Order order = client(keys).orders.create(orderRequest);
             return new RazorpayOrderResult(
                     order.get("id"),
                     order.get("amount"),
                     order.get("currency"),
-                    razorpayConfig.getKey_id()
+                    keys.keyId()
             );
         } catch (RazorpayException e) {
             throw new RuntimeException("Failed to create Razorpay order: " + e.getMessage(), e);

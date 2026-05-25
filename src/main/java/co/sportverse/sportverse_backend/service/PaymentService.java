@@ -42,8 +42,8 @@ public class PaymentService {
     @Autowired
     private UserService userService;
 
-    private RazorpayClient client() throws RazorpayException {
-        return new RazorpayClient(razorpayConfig.getKey_id(), razorpayConfig.getKey_secret());
+    private RazorpayClient razorpayClient(RazorpayConfig.ResolvedKeys keys) throws RazorpayException {
+        return new RazorpayClient(keys.keyId(), keys.keySecret());
     }
 
     public Map<String, Object> createOrderFromRequest(CreatePaymentOrderRequest request) {
@@ -98,7 +98,7 @@ public class PaymentService {
 
         String paymentId = request.getRazorpay_payment_id().trim();
         String signature = request.getRazorpay_signature().trim();
-        boolean isValid = verifySignature(requestOrderId, paymentId, signature);
+        boolean isValid = verifySignature(requestOrderId, paymentId, signature, jwtSubject);
         if (!isValid) {
             return null;
         }
@@ -131,7 +131,8 @@ public class PaymentService {
             String receipt = bookingId.length() <= 40 ? bookingId : bookingId.substring(0, 40);
             orderRequest.put("receipt", receipt);
 
-            Order order = client().orders.create(orderRequest);
+            RazorpayConfig.ResolvedKeys keys = razorpayConfig.resolveKeysForPayerPhone(userId);
+            Order order = razorpayClient(keys).orders.create(orderRequest);
 
             String orderId = order.get("id");
             int amount = order.get("amount");
@@ -141,7 +142,7 @@ public class PaymentService {
             bookingRepository.updateRazorpayOrderId(bookingId, orderId);
 
             Map<String, Object> response = new HashMap<>();
-            response.put("key", razorpayConfig.getKey_id());
+            response.put("key", keys.keyId());
             response.put("orderId", orderId);
             response.put("amount", amount);
             response.put("currency", currency);
@@ -157,14 +158,26 @@ public class PaymentService {
                 }
             }
             throw new RuntimeException("Failed to create Razorpay order: " + e.getMessage());
+        } catch (RuntimeException e) {
+            if (bookingId != null) {
+                try {
+                    bookingRepository.deleteById(bookingId);
+                    logger.info("Deleted orphaned booking {} after payment order initialization failed", bookingId);
+                } catch (Exception deleteEx) {
+                    logger.error("Failed to delete orphaned booking {}", bookingId, deleteEx);
+                }
+            }
+            throw e;
         }
     }
 
-    public boolean verifySignature(String orderId, String paymentId, String signature) {
+    public boolean verifySignature(String orderId, String paymentId, String signature, String payerJwtSubject) {
+        RazorpayConfig.ResolvedKeys keys = razorpayConfig.resolveKeysForPayerPhone(payerJwtSubject);
         try {
             String payload = orderId + '|' + paymentId;
             Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
-            SecretKeySpec secret_key = new SecretKeySpec(razorpayConfig.getKey_secret().getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+            SecretKeySpec secret_key =
+                    new SecretKeySpec(keys.keySecret().getBytes(StandardCharsets.UTF_8), "HmacSHA256");
             sha256_HMAC.init(secret_key);
             byte[] hashBytes = sha256_HMAC.doFinal(payload.getBytes(StandardCharsets.UTF_8));
             String generatedSignature = new String(Base64.getEncoder().encode(hashBytes));

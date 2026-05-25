@@ -417,10 +417,15 @@ public class BookingService {
         String date = booking.getString("date");
         List<String> slotIds = resolveSlotIdsForMutation(booking);
 
+        String bookingUserId = booking.getString("userId");
+        if (bookingUserId == null || bookingUserId.isBlank()) {
+            throw new IllegalStateException("Booking has no userId for Razorpay refund resolution");
+        }
+
         cancelBookingAndReleaseSlotsInTransaction(bookingId, venueId, date, slotIds);
 
         try {
-            Document refundFields = razorpayRefundService.createFullRefundDocument(razorpayPaymentId, bookingId);
+            Document refundFields = razorpayRefundService.createFullRefundDocument(razorpayPaymentId, bookingId, bookingUserId);
             bookingRepository.replaceRefundDto(bookingId, refundFields);
         } catch (RuntimeException e) {
             String msg = e.getMessage() != null ? e.getMessage() : "Refund failed";
@@ -525,7 +530,8 @@ public class BookingService {
                     request.getPaymentScreenshotUrl()
             );
 
-            RazorpayOrderService.RazorpayOrderResult order = razorpayOrderService.createOrder(totalAmount, bookingId);
+            RazorpayOrderService.RazorpayOrderResult order =
+                    razorpayOrderService.createOrder(totalAmount, bookingId, userId);
             bookingRepository.updateRazorpayOrderId(bookingId, order.getOrderId());
 
             return new CreateBookingOrderResponse(
