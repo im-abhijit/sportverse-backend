@@ -166,7 +166,7 @@ public class Venue {
     }
 
     public boolean isOpenNow() {
-        return isOpenNow;
+        return Boolean.TRUE.equals(isOpenNow);
     }
 
     public void setOpenNow(boolean openNow) {

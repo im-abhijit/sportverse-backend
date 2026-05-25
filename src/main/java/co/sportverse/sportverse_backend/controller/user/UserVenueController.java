@@ -17,9 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/**
- * Public user APIs for venue discovery. If a valid JWT is supplied, it is used only for logging.
- */
 @RestController
 @RequestMapping("/api/user/venues")
 public class UserVenueController {
@@ -29,14 +26,19 @@ public class UserVenueController {
     @Autowired
     private VenueService venueService;
 
+    /**
+     * Trending venue feed ({@code /trending}). Currently returns every venue in the venue collection;
+     * will later be restricted/ranked to trending venues only.
+     */
     @GetMapping("/trending")
-    public ResponseEntity<ApiResponse> getTrendingVenues(
+    public ResponseEntity<ApiResponse> listTrendingVenues(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser) {
         String userLabel =
-                authenticatedUser != null && authenticatedUser.getSubject() != null ? authenticatedUser.getSubject() : "anonymous";
+                authenticatedUser != null && authenticatedUser.getSubject() != null ? authenticatedUser.getSubject()
+                        : "anonymous";
         logger.info("GET /api/user/venues/trending - user subject: {}", userLabel);
 
-        List<Venue> venues = venueService.getTrendingVenues();
+        List<Venue> venues = venueService.listTrendingVenues();
         List<VenueResponse> responses = venues.stream().map(VenueResponse::new).toList();
 
         logger.info("GET /api/user/venues/trending - {} venues for subject {}", responses.size(), userLabel);

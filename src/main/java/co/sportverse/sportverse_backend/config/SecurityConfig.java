@@ -78,20 +78,13 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/secure/imagekit/**", "/api/partner/bookings/**")
-                        .authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/user/profile/me", "/api/user/bookings")
-                        .authenticated()
-                        .requestMatchers(HttpMethod.PATCH, "/api/user/profile/me")
-                        .authenticated()
-                        .requestMatchers(HttpMethod.POST,
-                                "/api/user/bookings/create-order-manual",
-                                "/api/bookings/create-order",
-                                "/api/bookings/cancel",
-                                "/api/payments/verify")
-                        .authenticated()
+                        .requestMatchers("/api/auth/**", "/api/whatsapp/webhook", "/webhooks/**", "/error",
+                                "/api/user/auth/**",
+                                "/api/user/slots/**",
+                                "/api/user/venues/**")
+                        .permitAll()
                         .anyRequest()
-                        .permitAll())
+                        .authenticated())
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))

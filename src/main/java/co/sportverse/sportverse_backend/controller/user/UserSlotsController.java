@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * Public user APIs for browsing venue availability. If a valid JWT is supplied, it is used only for logging.
+ * Authenticated user APIs for browsing venue availability (JWT required via Spring Security).
  */
 @RestController
 @RequestMapping("/api/user/slots")
