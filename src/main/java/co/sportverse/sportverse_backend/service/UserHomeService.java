@@ -64,8 +64,16 @@ public class UserHomeService {
 
 
         UpcomingBookingDto upcoming = new UpcomingBookingDto();
-        upcoming.setExists(false);
+        upcoming.setExists(true);
+        upcoming.setAmount(1000);
+        upcoming.setExists(true);
+        upcoming.setDate("27-05-2026");
+        upcoming.setSlotStartsAt("7 AM");
+        upcoming.setSlotEndsAt("7 PM");
+        upcoming.setVenueName("The Sports Arena");
+        upcoming.setStatus("CONFIRMED");
         dto.setUpcomingBooking(upcoming);
+
 
         OffersBannerDto offers = new OffersBannerDto();
         offers.setEnabled(false);
@@ -77,7 +85,7 @@ public class UserHomeService {
         partner.setEnabled(true);
         partner.setTitle("Have a venue?");
         partner.setSubtitle("Partner with SportVerse and grow your business with us.");
-        partner.setCtaText("Know more ->");
+        partner.setCtaText("Know more");
         dto.setPartnerBanner(partner);
 
         return dto;
