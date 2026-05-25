@@ -159,6 +159,14 @@ public class VenueService {
     }
 
     /**
+     * Trending venues for the user app feed. Currently returns all venues from the {@code venues} collection;
+     * filtering/ranking will be added later (e.g. trending only).
+     */
+    public List<Venue> listTrendingVenues() {
+        return getVenues(null, null, null, null);
+    }
+
+    /**
      * User-facing discovery: optional {@code city} and/or {@code sport} (venue {@code games} contains the sport).
      * At least one filter must be provided.
      */
@@ -177,10 +185,6 @@ public class VenueService {
             query.addCriteria(Criteria.where("games").in(sport.trim()));
         }
         return venueRepository.findByQuery(query);
-    }
-
-    public List<Venue> getTrendingVenues() {
-        return venueRepository.findByQuery(new Query());
     }
 
     public List<Venue> getVenuesByCity(String city) {
