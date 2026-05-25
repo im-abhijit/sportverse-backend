@@ -33,12 +33,13 @@ public class VerifyOtpResponse {
         this.userName = userName;
     }
 
-    public VerifyOtpResponse(boolean success, boolean isNewUser,String message, String jwtToken,String userId) {
+    public VerifyOtpResponse(boolean success, boolean isNewUser,String message, String jwtToken,String userId, String userName) {
         this.success = success;
         this.message = message;
         this.jwtToken = jwtToken;
         this.isNewUser = isNewUser;
         this.userId = userId;
+        this.userName = userName;
     }
 
     public boolean isSuccess() {
