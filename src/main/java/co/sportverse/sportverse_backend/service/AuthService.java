@@ -8,6 +8,7 @@ import co.sportverse.sportverse_backend.repository.PartnerRepository;
 import co.sportverse.sportverse_backend.service.factory.OtpProviderFactory;
 import com.twilio.rest.verify.v2.service.Verification;
 import com.twilio.rest.verify.v2.service.VerificationCheck;
+import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -189,6 +190,10 @@ public class AuthService {
         }
         String norm = JwtService.normalizeIndianPhoneDigits(user.getPhone());
         String jwtToken = jwtService.createUserAccessToken(norm);
-        return new VerifyOtpResponse(true,isNewUser,message,jwtToken,user.getPhone());
+        String username = StringUtils.isNotBlank(user.getFirstName()) ? user.getFirstName() : user.getName();
+        if(StringUtils.isBlank(username)) {
+            username=user.getPhone();
+        }
+        return new VerifyOtpResponse(true,isNewUser,message,jwtToken,user.getPhone(),username);
     }
 }
