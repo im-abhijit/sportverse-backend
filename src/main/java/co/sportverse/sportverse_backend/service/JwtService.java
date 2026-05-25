@@ -147,12 +147,8 @@ public class JwtService {
 
 
     public Optional<AuthenticatedUser> validateAndResolvePrincipal(String token) {
-        if (token == null || token.isBlank() || token.equals("abc")) {
-            return Optional.of(new AuthenticatedUser(
-                            "8218851537",
-                            "ROLE_USER",
-                            "abc"
-                    ));
+        if (token == null || token.isBlank()) {
+            return Optional.empty();
         }
         try {
             Claims claims = verifiedClaims(token.trim());
