@@ -76,15 +76,24 @@ public class SecurityConfig {
         http.cors(c -> c.configurationSource(corsConfigurationSource))
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                /**
+                 * Default is public ({@code permitAll}). Only handlers that enforce JWT via
+                 * {@link org.springframework.security.core.annotation.AuthenticationPrincipal} + {@link co.sportverse.sportverse_backend.security.AuthenticatedUserSupport}
+                 * (or equivalent null checks) are authenticated — e.g. {@code GET /api/user/slots} and {@code GET /api/user/venues} stay public because they only log the principal optionally.
+                 */
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/auth/**", "/api/whatsapp/webhook", "/webhooks/**", "/error",
-                                "/api/user/auth/**",
-                                "/api/user/slots/**",
-                                "/api/user/venues/**")
-                        .permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/user/home").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/user/bookings").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/user/bookings/create-order-manual").authenticated()
+                        .requestMatchers("/api/user/profile/**").authenticated()
+                        .requestMatchers("/api/partner/bookings/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/payments/verify").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/bookings/create-order").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/bookings/cancel").authenticated()
+                        .requestMatchers("/api/secure/imagekit/**").authenticated()
                         .anyRequest()
-                        .authenticated())
+                        .permitAll())
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
