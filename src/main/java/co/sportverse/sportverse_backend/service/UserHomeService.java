@@ -1,7 +1,7 @@
 package co.sportverse.sportverse_backend.service;
 
+import co.sportverse.sportverse_backend.dto.VenueResponse;
 import co.sportverse.sportverse_backend.dto.home.HeroSectionDto;
-import co.sportverse.sportverse_backend.dto.home.HomeVenueLiteDto;
 import co.sportverse.sportverse_backend.dto.home.OffersBannerDto;
 import co.sportverse.sportverse_backend.dto.home.PartnerBannerDto;
 import co.sportverse.sportverse_backend.dto.home.SportsCategoryDto;
@@ -59,21 +59,19 @@ public class UserHomeService {
         dto.setSportsCategories(sportsCategoryDtos);
 
         List<Venue> venues = venueService.listTrendingVenues();
-        List<HomeVenueLiteDto> trendingLite = toLiteVenues(venues);
-        dto.setTrendingVenues(trendingLite);
+        List<VenueResponse> trendingVenues = toVenueResponses(venues);
+        dto.setTrendingVenues(trendingVenues);
 
 
         UpcomingBookingDto upcoming = new UpcomingBookingDto();
         upcoming.setExists(true);
         upcoming.setAmount(1000);
-        upcoming.setExists(true);
         upcoming.setDate("27-05-2026");
         upcoming.setSlotStartsAt("7 AM");
         upcoming.setSlotEndsAt("7 PM");
         upcoming.setVenueName("The Sports Arena");
         upcoming.setStatus("CONFIRMED");
         dto.setUpcomingBooking(upcoming);
-
 
         OffersBannerDto offers = new OffersBannerDto();
         offers.setEnabled(false);
@@ -91,40 +89,13 @@ public class UserHomeService {
         return dto;
     }
 
-    private static List<HomeVenueLiteDto> toLiteVenues(List<Venue> venues) {
+    private static List<VenueResponse> toVenueResponses(List<Venue> venues) {
         if (venues == null || venues.isEmpty()) {
             return Collections.emptyList();
         }
         return venues.stream()
                 .filter(v -> v != null && v.getId() != null)
-                .map(UserHomeService::toLiteVenue)
+                .map(VenueResponse::new)
                 .collect(Collectors.toList());
-    }
-
-    /** Maps a persisted {@link Venue} to the home API lite shape (ratings/tags filled by business rules later). */
-    private static HomeVenueLiteDto toLiteVenue(Venue venue) {
-        HomeVenueLiteDto lite = new HomeVenueLiteDto();
-        lite.setVenueId(venue.getId());
-        lite.setName(venue.getName());
-        lite.setCity(venue.getCity());
-        lite.setLocation(venue.getLocation());
-        lite.setSport(firstGameLabel(venue));
-        lite.setThumbnailUrl(venue.getThumbnailUrl());
-        lite.setRating(null);
-        lite.setOpenNow(venue.isOpenNow());
-        lite.setStartingPrice(venue.getMinPrice());
-        List<String> tags = new ArrayList<>();
-        tags.add("Trending");
-        lite.setTags(tags);
-        return lite;
-    }
-
-    private static String firstGameLabel(Venue venue) {
-        List<String> games = venue.getGames();
-        if (games == null || games.isEmpty()) {
-            return null;
-        }
-        String first = games.get(0);
-        return first != null && !first.isBlank() ? first.trim() : null;
     }
 }
