@@ -1,5 +1,7 @@
 package co.sportverse.sportverse_backend.dto.home;
 
+import co.sportverse.sportverse_backend.dto.VenueResponse;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,8 +10,8 @@ public class UserHomeScreenDto {
 
     private HeroSectionDto heroSection;
     private List<SportsCategoryDto> sportsCategories = new ArrayList<>();
-    private List<HomeVenueLiteDto> recommendedVenues = new ArrayList<>();
-    private List<HomeVenueLiteDto> trendingVenues = new ArrayList<>();
+    private List<VenueResponse> recommendedVenues = new ArrayList<>();
+    private List<VenueResponse> trendingVenues = new ArrayList<>();
     private List<NearbyVenueCardDto> nearbyVenues = new ArrayList<>();
     private UpcomingBookingDto upcomingBooking;
     private OffersBannerDto offersBanner;
@@ -32,19 +34,19 @@ public class UserHomeScreenDto {
         this.sportsCategories = sportsCategories != null ? sportsCategories : new ArrayList<>();
     }
 
-    public List<HomeVenueLiteDto> getRecommendedVenues() {
+    public List<VenueResponse> getRecommendedVenues() {
         return recommendedVenues;
     }
 
-    public void setRecommendedVenues(List<HomeVenueLiteDto> recommendedVenues) {
+    public void setRecommendedVenues(List<VenueResponse> recommendedVenues) {
         this.recommendedVenues = recommendedVenues != null ? recommendedVenues : new ArrayList<>();
     }
 
-    public List<HomeVenueLiteDto> getTrendingVenues() {
+    public List<VenueResponse> getTrendingVenues() {
         return trendingVenues;
     }
 
-    public void setTrendingVenues(List<HomeVenueLiteDto> trendingVenues) {
+    public void setTrendingVenues(List<VenueResponse> trendingVenues) {
         this.trendingVenues = trendingVenues != null ? trendingVenues : new ArrayList<>();
     }
 
