@@ -111,4 +111,16 @@ public class UserRepository {
         Document updated = usersCollection.find(filter).first();
         return User.fromDocument(updated);
     }
+
+    public long deleteById(String userId) {
+        if (userId == null || userId.trim().isEmpty()) {
+            return 0;
+        }
+        try {
+            Bson filter = eq("_id", new ObjectId(userId.trim()));
+            return usersCollection.deleteOne(filter).getDeletedCount();
+        } catch (IllegalArgumentException e) {
+            return 0;
+        }
+    }
 }

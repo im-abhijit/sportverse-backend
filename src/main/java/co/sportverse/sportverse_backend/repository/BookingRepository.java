@@ -8,6 +8,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
@@ -130,6 +131,15 @@ public class BookingRepository {
         }
         Bson filter = eq("_id", new org.bson.types.ObjectId(bookingId.trim()));
         bookingsCollection.deleteOne(filter);
+    }
+
+    /** All bookings whose {@code userId} equals the given JWT subject string. */
+    public List<Document> findAllByUserId(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return new ArrayList<>();
+        }
+        Bson filter = eq("userId", userId.trim());
+        return bookingsCollection.find(filter).into(new ArrayList<>());
     }
 
     public Document findByRazorpayOrderId(String razorpayOrderId) {
