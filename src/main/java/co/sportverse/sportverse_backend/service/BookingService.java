@@ -16,6 +16,7 @@ import co.sportverse.sportverse_backend.entity.Venue;
 import co.sportverse.sportverse_backend.entity.VenueSlots;
 import co.sportverse.sportverse_backend.repository.BookingRepository;
 import co.sportverse.sportverse_backend.repository.PartnerRepository;
+import co.sportverse.sportverse_backend.repository.UserRepository;
 import co.sportverse.sportverse_backend.repository.SlotsRepository;
 import co.sportverse.sportverse_backend.repository.VenueRepository;
 import co.sportverse.sportverse_backend.service.UserService;
@@ -27,6 +28,8 @@ import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoClient;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -42,6 +45,8 @@ import java.util.UUID;
 
 @Service
 public class BookingService {
+
+    private static final Logger logger = LoggerFactory.getLogger(BookingService.class);
 
     @Autowired
     private BookingRepository bookingRepository;
@@ -75,6 +80,9 @@ public class BookingService {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private UserRepository userRepository;
 
     public List<BookingItemResponse> getUserBookings(String userId) {
         Query query = new Query();
@@ -1028,6 +1036,61 @@ public class BookingService {
                 }
             }
         }
+    }
+
+    public record AccountDeletionResult(long bookingsRemoved, boolean userRemoved) {}
+
+    /**
+     * Deletes all {@code bookings} whose {@code userId} equals the JWT {@code subject}, frees slots when possible,
+     * then deletes the {@code users} document.
+     */
+    public AccountDeletionResult deleteUserAccountForJwtSubject(String jwtSubject) {
+        User user = userService.requireUserForJwtSubject(jwtSubject);
+        List<Document> bookings = bookingRepository.findAllByUserId(jwtSubject);
+
+        long bookingsRemoved = 0;
+        for (Document booking : bookings) {
+            try {
+                releaseSlotsForDeletedAccountBooking(booking);
+            } catch (Exception e) {
+                logger.warn("Account deletion: could not release slots for booking {}",
+                        booking != null && booking.getObjectId("_id") != null
+                                ? booking.getObjectId("_id").toHexString()
+                                : "?",
+                        e);
+            }
+            String bid = extractBookingHexId(booking);
+            if (bid != null) {
+                bookingRepository.deleteById(bid);
+                bookingsRemoved++;
+            }
+        }
+
+        boolean userRemoved = userRepository.deleteById(user.getId()) > 0;
+        if (!userRemoved) {
+            logger.warn("Account deletion: user document was not deleted for id {}", user.getId());
+        }
+        return new AccountDeletionResult(bookingsRemoved, userRemoved);
+    }
+
+    private static String extractBookingHexId(Document booking) {
+        if (booking == null || booking.getObjectId("_id") == null) {
+            return null;
+        }
+        return booking.getObjectId("_id").toHexString();
+    }
+
+    private void releaseSlotsForDeletedAccountBooking(Document booking) {
+        if (booking == null || booking.get("venueId") == null || booking.getString("date") == null) {
+            return;
+        }
+        String venueId = booking.getObjectId("venueId").toString();
+        String date = booking.getString("date");
+        List<String> slotIds = resolveSlotIdsForMutation(booking);
+        if (slotIds == null || slotIds.isEmpty()) {
+            return;
+        }
+        slotsRepository.markSlotsFree(venueId, date, slotIds);
     }
 }
 
